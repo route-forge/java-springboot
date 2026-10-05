@@ -20,7 +20,7 @@
 | 缓存 | 自写 `CacheStore` SPI（不接 Spring Cache），内存实现 + Redis 可选 |
 | 文档 | 本仓自带一份 Java SPEC；跨语言端点契约以 `route-forge/php-laravel/.docs/SPEC.md` 为权威 |
 | 前端 | `@route-forge/*` 3.1.0 零改动接入（已实证：契约即插件点，vue/react 包里 0 处 PHP 痕迹） |
-| 镜像 | 依赖走腾讯镜像、插件走阿里云，配置在 `F:/gradle_home/init.d/cn-mirrors.gradle.kts`；wrapper 的 `distributionUrl` 指腾讯（本机缓存即来自该 URL，官方源在本机 SSL 握手失败） |
+| Gradle 环境 | 依赖与发行包全在项目本地 `<根>/.gradle`（gitignore），与用户目录隔离；镜像配置在 `.gradle/init.d/cn-mirrors.gradle.kts`（依赖腾讯、插件阿里、官方兜底），不入 git。`settings.gradle.kts` 只声明 mavenCentral。wrapper 的 `distributionUrl` 指腾讯——本机缓存的 9.7.0 发行包正是该 URL 的哈希，而官方 services.gradle.org 在本机 SSL 握手失败 |
 
 ## 阶段状态
 
@@ -69,8 +69,10 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
 
 ```bash
 cd G:/Java/route-forge-springboot
-GRADLE_USER_HOME=F:/gradle_home ./gradlew.bat build          # 全量门禁
-GRADLE_USER_HOME=F:/gradle_home ./gradlew.bat :forge-core:test
+export GRADLE_USER_HOME="$PWD/.gradle"   # cmd 下：set GRADLE_USER_HOME=G:\Java\route-forge-springboot\.gradle
+./gradlew.bat build                      # 全量门禁
+./gradlew.bat :forge-core:test           # 单模块
+./gradlew.bat clean build --offline      # 本地缓存自足性检查（加新依赖后必查）
 ```
 
 提交规范：`type(scope): 中文描述`，scope 用 `core` / `starter` / `build` / `docs` / `example`；提交前跑全量；不 push。

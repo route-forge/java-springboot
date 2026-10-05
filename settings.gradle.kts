@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     repositories {
         mavenCentral()
     }
-    // 统一在 settings 声明仓库源；个人镜像经 init.d 前置注入，不改本文件
+    // 统一在 settings 声明仓库源；个人镜像经本地 .gradle/init.d 前置注入，不改本文件
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
 }
 

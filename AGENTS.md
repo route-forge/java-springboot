@@ -19,14 +19,19 @@ Route Forge 家族的 Spring Boot 后端适配包。前端 `@route-forge/core|vu
 
 ## 构建与验证
 
+标准命令（`GRADLE_USER_HOME` 指向**本项目自己的** `.gradle`，与用户目录及其他工程完全隔离）：
+
 ```bash
-./gradlew.bat build            # 全量：编译 + 测试 + jar
-./gradlew.bat :forge-core:test # 单模块测试（迭代期用，最终仍需全量）
-./gradlew.bat :forge-spring-boot-starter:build
+export GRADLE_USER_HOME="$PWD/.gradle"        # 或每条命令前置 GRADLE_USER_HOME=...
+./gradlew.bat build                           # 全量：编译 + 测试 + jar
+./gradlew.bat :forge-core:test                # 单模块测试（迭代期用，最终仍需全量）
+./gradlew.bat clean build --offline           # 缓存自足性检查（新增依赖后必须能离线跑通）
 ```
 
-- Gradle：wrapper 9.7.0（`distributionUrl` 指向腾讯镜像）。`GRADLE_USER_HOME` 用本机 `F:/gradle_home`，缓存完整可 `--offline`。
-- 镜像加速属个人环境：写在 `GRADLE_USER_HOME/init.d/`，**不进仓库**（仓库只声明 mavenCentral，保证 CI 与他人可复现）。
+- Gradle：wrapper 9.7.0-all，发行包与依赖缓存都在 `<项目根>/.gradle`（已 gitignore）。首次拉取后 `--offline` 可全量重跑。
+- 镜像加速：`<项目根>/.gradle/init.d/cn-mirrors.gradle.kts`（依赖走腾讯、插件走阿里云、官方源兜底）。
+  它在 gitignore 内，**不进仓库**；`settings.gradle.kts` 只声明 mavenCentral，保证 CI 与他人 clone 可复现。
+- 因此本项目的构建只在指定 `GRADLE_USER_HOME` 时才吃到镜像与本地缓存；不指定则回落到用户目录的缓存，功能不受影响。
 - JDK：基线 Java 21（`options.release` 锁定，不用 toolchain 自动下载）。
 - 编码：全仓 UTF-8 强制（`-Dfile.encoding` / `stdout.encoding`）。断言与 fixture 含中文，Windows GBK 会造成假失败。
 - `-parameters` 全仓强制：`@ConfigurationProperties` 构造绑定依赖它，丢了要到运行期才炸，故由 `BuildConventionTest` 把守。
