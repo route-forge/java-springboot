@@ -1,0 +1,76 @@
+# 实施进度与交接
+
+> 冷启动恢复用：新会话先读本文件 + `AGENTS.md` + `.docs/SPEC.md`，不必重读 PHP 参照仓。
+> 阶段划分与验收口径见 `AGENTS.md`；本文件只记「已经定了什么、做到哪、下一步是什么」。
+
+## 已锁定的决策
+
+| 主题 | 结论 |
+|---|---|
+| 能力范围 | v1 全量对等 SPEC（含管理器页面与 d.ts 生成） |
+| 交付形态 | 双模块库（`forge-core` + `forge-spring-boot-starter`）+ 示例后端 + Vue3/React 双前端 |
+| 语言/构建 | Java 21（`options.release` 锁定，不用 toolchain 自动下载）+ Gradle Kotlin DSL + wrapper 9.7.0-all |
+| Spring 基线 | Spring Boot 4.1.1（2026-10 最新稳定；4.2.0 仅 milestone） |
+| 坐标 | group `io.github.route-forge`（对应 GitHub org），artifact `forge-core` / `forge-spring-boot-starter`；Java 包根 `io.github.routeforge.*`（包名不允许连字符） |
+| 命名通道 | 形态 C：`@ForgeRoute` 组合注解（meta `@RequestMapping`，全量 `@AliasFor` 透传）+ `@Forge` 副注解逃生舱 + `RouteNamingStrategy` SPI（默认关）；冲突 fail-fast = RF_BE_010 |
+| tier 继承 | 五级优先级不变：方法级 = 显式 > 类/包级 `@ForgeTier` = group 继承 > `RouteClassifier` bean > `match` > `unassigned` |
+| middleware | `match.middleware` = 元数据标签（不参与真实鉴权）；`endpoint_middleware` = 真实接入 Spring Security |
+| 配置保存 | 只写独立 `forge-levels.yml`（备份 + 回读比对），绝不改宿主 `application.yml` |
+| CLI | `ApplicationRunner` 参数式：`--forge:list` / `--forge:types` / `--forge:clear` |
+| 缓存 | 自写 `CacheStore` SPI（不接 Spring Cache），内存实现 + Redis 可选 |
+| 文档 | 本仓自带一份 Java SPEC；跨语言端点契约以 `route-forge/php-laravel/.docs/SPEC.md` 为权威 |
+| 前端 | `@route-forge/*` 3.1.0 零改动接入（已实证：契约即插件点，vue/react 包里 0 处 PHP 痕迹） |
+| 镜像 | 依赖走腾讯镜像、插件走阿里云，配置在 `F:/gradle_home/init.d/cn-mirrors.gradle.kts`；wrapper 的 `distributionUrl` 指腾讯（本机缓存即来自该 URL，官方源在本机 SSL 握手失败） |
+
+## 阶段状态
+
+- ✅ **P0 骨架** `f8c7c25`：多模块 + wrapper 离线 + UTF-8/`-parameters`/Java 21 约定 + `BuildConventionTest`
+- ✅ **P1a 契约与基础件** `4733490`：`ForgeException` 契约、异常族、`RouteInfo`、`RouteNameFilter`、`EndpointPrefix`、`JsSafeEncoder`、`WarningSink`
+- ✅ **P1b TierResolver** `ebdc417`：五级优先级 + `probe()`，53 例跨语言对等
+- ✅ **P1c 缓存** `b867b04`：`CacheStore` + `RouteCache`（TTL 三态 / keys 索引 / debug 旁路 / `forgetLevel` 连带 summary）
+- ✅ **P1d 别名 + 严格扫描** `f1346bb`：`AliasResolver`、`StrictViolationScanner`、`RF_BE_009`，27 例跨语言对等
+- ⏳ **P1e** `RouteAnalyzer` + `RouteRepository`（PHP 侧 540 + 475 行，含 warnings 全口径、`--unnamed` 数据、摘要与层级产物、计数口径）
+- ⏳ **P1f** `TypeGenerator`（d.ts 逐行）+ `SummaryRenderer`
+- ⏳ **P2** 注解与路由扫描、URI 归一化、两端点、异常 advice
+- ⏳ **P3** `@ForgeTier` 类/包继承接线、classifier bean、双通道冲突 fail-fast、strict 聚合上 HTTP
+- ⏳ **P4** CLI 三命令；**P5** Security 守卫 / 管理器 / `forge-levels.yml` 写回 / 内嵌摘要；**P6** 示例 + 双前端 + Laravel 端 golden + 发布
+
+## 跨语言对等的工作流（重要）
+
+期望值**不手写**。`fixtures/php/` 下的 oracle 脚本调用 `G:\Web\php-common` 的真实代码产出 `expected/*.json`，
+Java 测试读 JSON 逐字段比对。改了语义要重新生成 fixture，且必须先看 diff 再提交（fixture 变更 = 契约变更）。
+
+```bash
+php fixtures/php/oracle-tier.php         > fixtures/php/expected/tier-resolver.json
+php fixtures/php/oracle-alias-strict.php > fixtures/php/expected/alias-strict.json
+```
+
+php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerInterface` 桩。
+提交里记了 `provenance.phpCommonCommit`，对等断言的是那个 commit 的行为。
+
+## 已由 oracle 抓出的偏差（勿再犯）
+
+1. `RF_BE_001` 消息在无名路由上是 `Route  (uri)`（PHP 把 null 插值成空串，两个空格），Java 直拼会变成 `Route null (uri)`。
+2. `prefix: [null]` 这类畸形配置 PHP 宽容归一，`List.copyOf` / `Map.copyOf` 会 NPE → 核心层集合一律用 unmodifiable 包装。
+3. 显式层级名拼错的 `RF_BE_002` 对**无名**路由不可达（前置守卫先返回），消息里的 `(uri)` 兜底只有 `RF_BE_006` 走得到。
+4. `middleware_match` 的类型守卫在 prefix 循环**之前**执行 → 无效类型的告警按「路由 × 层级」出现，且该层级没配 middleware 也照样告警。
+5. PHP 空关联数组 `json_encode` 出 `[]` 而非 `{}`，fixture 读回的层级配置可能是空 List → `LevelsConfig` 值类型必须宽容。
+6. classifier 抛错文本含异常类名，两侧必然不同（PHP 无包前缀）→ 唯一按归一化比对的字段。
+
+## 待拍板（进入 P2/P5 前需要定）
+
+1. **管理器页面的「开发环境」判据**：Laravel 用 `APP_DEBUG`；Spring 侧 `debug=true` 是框架自带的调试开关，
+   语义与「允许写配置文件」不完全重合。候选：`debug=true` / 专用 profile / 只留 `forge.manager.enabled` + IP 白名单（**倾向此项 + 生产环境显式告警**）。
+2. **缓存 debug 旁路是否复用同一判据**（同上，PHP 侧旁路与管理器同源）。
+3. **classifier 是否常驻 bean**：若常驻，路由变更会触发重扫（Laravel 闭包也是常驻的，倾向「常驻」以对齐行为）。
+4. **版本线起点**：当前 `0.1.0`，发布时是否直接按 `1.0.0` 起算（家族其他包已到 2.x/3.x，但 Java 适配是独立一条线）。
+
+## 恢复步骤
+
+```bash
+cd G:/Java/route-forge-springboot
+GRADLE_USER_HOME=F:/gradle_home ./gradlew.bat build          # 全量门禁
+GRADLE_USER_HOME=F:/gradle_home ./gradlew.bat :forge-core:test
+```
+
+提交规范：`type(scope): 中文描述`，scope 用 `core` / `starter` / `build` / `docs` / `example`；提交前跑全量；不 push。
