@@ -1,0 +1,37 @@
+# 集中版本管理：子模块只写别名，不写版本号。
+# Spring 生态版本一律交 Boot BOM 裁决（见各模块的 platform 声明），此处只留需要显式版本的东西。
+[versions]
+java = "21"
+# 2026-10-05 实测 Maven Central：4.1.1 为最新稳定版，4.2.0 仅有 milestone
+springBoot = "4.1.1"
+
+[libraries]
+# --- 平台 BOM：唯一版本裁决者 ---
+spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBoot" }
+
+# --- 适配层编译期依赖（宿主由 spring-boot-starter-webmvc 提供，故 compileOnly）---
+spring-web = { module = "org.springframework:spring-web" }
+spring-webmvc = { module = "org.springframework:spring-webmvc" }
+spring-context = { module = "org.springframework:spring-context" }
+spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-autoconfigure" }
+spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
+jakarta-servlet-api = { module = "jakarta.servlet:jakarta.servlet-api" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
+slf4j-api = { module = "org.slf4j:slf4j-api" }
+
+# --- 可选能力：classpath 上有则启用，无则降级 ---
+spring-security-config = { module = "org.springframework.security:spring-security-config" }
+spring-security-web = { module = "org.springframework.security:spring-security-web" }
+spring-data-redis = { module = "org.springframework.data:spring-data-redis" }
+# 管理器写回 forge-levels.yml 用；Boot 应用本身已带同一版本，实际不增加传递负担
+snakeyaml = { module = "org.yaml:snakeyaml" }
+
+# --- 测试 ---
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj-core = { module = "org.assertj:assertj-core" }
+
+[plugins]
+# 仅供示例应用使用；库模块严禁 apply，否则会被打成可执行 bootJar
+spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }

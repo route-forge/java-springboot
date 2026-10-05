@@ -1,0 +1,32 @@
+# Gradle
+/.build/
+build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+*.class
+*.log
+
+# IDE / 编辑器
+/.idea/
+/.vscode/
+/.fleet/
+*.iml
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 本地环境（镜像、代理、个人 JDK 路径等一律留在这里，不进仓库）
+*.local
+local.properties
+.env
+.env.*
+
+# 示例前端（pnpm）
+node_modules/
+/examples/**/dist/
+
+# 临时产物一律落 F:/tmp，仓库内不应出现暂存目录
+/tmp/
+.staging/
