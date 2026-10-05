@@ -1,0 +1,1872 @@
+{
+    "provenance": {
+        "generator": "fixtures/php/oracle-tier.php",
+        "php": "8.5.11",
+        "phpCommonCommit": "f3fa70d",
+        "note": "expected 由真实 php-common 代码产出，Java 侧不得按文档自编断言"
+    },
+    "cases": [
+        {
+            "input": {
+                "name": "explicit-tier-wins-over-match",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "api"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "api/orders",
+                    "middleware": [],
+                    "tier": "admin"
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "explicit",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "explicit-tier-wins-over-classifier",
+                "strict": false,
+                "levels": {
+                    "admin": [],
+                    "client": []
+                },
+                "classifier": {
+                    "return": "client"
+                },
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [],
+                    "tier": "admin"
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "explicit",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "explicit-unknown-level",
+                "strict": false,
+                "levels": {
+                    "admin": [],
+                    "client": []
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [],
+                    "tier": "manage"
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": {
+                    "code": "RF_BE_002",
+                    "httpStatus": 404,
+                    "message": "Route a.b has tier [manage] which is not defined in levels config. Available levels: admin, client"
+                },
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "explicit-unknown-level",
+                    "requested": "manage",
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "tier-without-name-preempts-unknown-level-check",
+                "strict": false,
+                "levels": {
+                    "admin": []
+                },
+                "classifier": null,
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": "ghost"
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [
+                    "Route (api/x) has tier [ghost] but no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or remove the tier."
+                ],
+                "probeParallel": {
+                    "level": null,
+                    "source": "explicit-unknown-level",
+                    "requested": "ghost",
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "explicit-empty-tier-is-not-explicit",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "api"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": ""
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "tier-without-name-strict",
+                "strict": true,
+                "levels": {
+                    "admin": []
+                },
+                "classifier": null,
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": "admin"
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": {
+                    "code": "RF_BE_005",
+                    "httpStatus": 500,
+                    "message": "Route (api/x) has tier [admin] but no route name assigned. Route Forge requires a route name when tier is set. Add ->name(...) to the route or remove the tier."
+                },
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "explicit",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "tier-without-name-lenient",
+                "strict": false,
+                "levels": {
+                    "admin": []
+                },
+                "classifier": null,
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": "admin"
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [
+                    "Route (api/x) has tier [admin] but no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or remove the tier."
+                ],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "explicit",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "classifier-returning-tier",
+                "strict": false,
+                "levels": {
+                    "admin": [],
+                    "client": []
+                },
+                "classifier": {
+                    "return": "client"
+                },
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "client",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "client",
+                    "source": "classifier",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "classifier-null-falls-through-to-match",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "api"
+                            ]
+                        }
+                    },
+                    "client": []
+                },
+                "classifier": {
+                    "return": null
+                },
+                "route": {
+                    "name": "a.b",
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "classifier-empty-string-is-not-a-statement",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "api"
+                            ]
+                        }
+                    }
+                },
+                "classifier": {
+                    "return": ""
+                },
+                "route": {
+                    "name": "a.b",
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "classifier-non-string-is-not-a-statement",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "api"
+                            ]
+                        }
+                    }
+                },
+                "classifier": {
+                    "returnRaw": 123
+                },
+                "route": {
+                    "name": "a.b",
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "classifier-unknown-tier",
+                "strict": false,
+                "levels": {
+                    "admin": []
+                },
+                "classifier": {
+                    "return": "ghost"
+                },
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": {
+                    "code": "RF_BE_006",
+                    "httpStatus": 500,
+                    "message": "Classifier returned unknown tier [ghost] for route a.b. Available tiers: admin"
+                },
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "classifier-unknown-tier",
+                    "requested": "ghost",
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "classifier-unknown-tier-unnamed-uses-uri-in-message",
+                "strict": false,
+                "levels": {
+                    "admin": []
+                },
+                "classifier": {
+                    "return": "ghost"
+                },
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": {
+                    "code": "RF_BE_006",
+                    "httpStatus": 500,
+                    "message": "Classifier returned unknown tier [ghost] for route (api/x). Available tiers: admin"
+                },
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "classifier-unknown-tier",
+                    "requested": "ghost",
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "classifier-throws",
+                "strict": false,
+                "levels": {
+                    "admin": []
+                },
+                "classifier": {
+                    "throw": "boom"
+                },
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": {
+                    "code": "RF_BE_004",
+                    "httpStatus": 500,
+                    "message": "Classifier callback threw: boom"
+                },
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "classifier-error",
+                    "requested": null,
+                    "error": "RuntimeException: boom"
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "prefix-exact-match",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "admin",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "prefix-segment-boundary-administrator-not-matched",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "administrator/users",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "prefix-nested-segment-matched",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "admin/users/index",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "prefix-single-string-normalized",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": "admin"
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "admin/users",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "prefix-empty-string-skipped",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                ""
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "anything",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "prefix-with-leading-slash-does-not-match-laravel-uri",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "/admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "admin/users",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "prefix-null-entry-matches-slash-prefixed-uri-only",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                null
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "admin/users",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "prefix-null-entry-matches-slash-prefixed-uri-positive",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                null
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "/admin/users",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "prefix-numeric-entry-stringified",
+                "strict": false,
+                "levels": {
+                    "v1": {
+                        "match": {
+                            "prefix": [
+                                1
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "1/orders",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "v1",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "v1",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-any-hit",
+                "strict": false,
+                "levels": {
+                    "client": {
+                        "match": {
+                            "middleware": [
+                                "auth",
+                                "throttle"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "auth"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "client",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "client",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-any-miss",
+                "strict": false,
+                "levels": {
+                    "client": {
+                        "match": {
+                            "middleware": [
+                                "auth"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "guest"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-all-requires-every-entry",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "middleware": [
+                                "auth",
+                                "admin"
+                            ],
+                            "middleware_match": "all"
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "auth"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-all-hit",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "middleware": [
+                                "auth",
+                                "admin"
+                            ],
+                            "middleware_match": "all"
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "auth",
+                        "admin",
+                        "extra"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-strict-type-comparison-numeric-config",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "middleware": [
+                                0
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "0"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-dnf-and-or",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "middleware": [
+                                "auth",
+                                "admin",
+                                "super_admin"
+                            ],
+                            "middleware_match": [
+                                [
+                                    0,
+                                    1
+                                ],
+                                [
+                                    2
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "super_admin"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-dnf-first-clause-miss-second-hit",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "middleware": [
+                                "auth",
+                                "admin"
+                            ],
+                            "middleware_match": [
+                                [
+                                    0,
+                                    1
+                                ],
+                                [
+                                    1
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "admin"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-dnf-out-of-range-index-fails-clause",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "middleware": [
+                                "auth"
+                            ],
+                            "middleware_match": [
+                                [
+                                    5
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "auth"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-dnf-empty-clause-skipped",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "middleware": [
+                                "auth",
+                                "admin"
+                            ],
+                            "middleware_match": [
+                                [],
+                                [
+                                    0
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "auth"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-dnf-non-array-clause-skipped",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "middleware": [
+                                "auth"
+                            ],
+                            "middleware_match": [
+                                "nope",
+                                [
+                                    0
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "auth"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-dnf-string-index-coerced",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "middleware": [
+                                "auth",
+                                "admin"
+                            ],
+                            "middleware_match": [
+                                [
+                                    "1"
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "admin"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-match-unknown-string-degrades-to-any",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "middleware": [
+                                "auth",
+                                "admin"
+                            ],
+                            "middleware_match": "whatever"
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "auth"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-match-invalid-type-warns-and-degrades",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "middleware": [
+                                "auth",
+                                "admin"
+                            ],
+                            "middleware_match": 7
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "x",
+                    "middleware": [
+                        "auth"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [
+                    "Route (x) matched a level whose middleware_match rule has invalid type [int]; expected string (\"any\"/\"all\") or DNF array. Falling back to \"any\"."
+                ],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "middleware-match-invalid-type-warns-even-without-middleware",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "api"
+                            ],
+                            "middleware_match": true
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [
+                    "Route (api/x) matched a level whose middleware_match rule has invalid type [bool]; expected string (\"any\"/\"all\") or DNF array. Falling back to \"any\"."
+                ],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "prefix-and-middleware-are-or-related",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "zzz"
+                            ],
+                            "middleware": [
+                                "auth"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "api/x",
+                    "middleware": [
+                        "auth"
+                    ],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "empty-match-block-never-hits",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": []
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "anything",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "level-without-match-key-never-hits",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "description": "无规则"
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "anything",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "last-wins-takes-later-level",
+                "strict": false,
+                "levels": {
+                    "client": {
+                        "match": {
+                            "prefix": [
+                                "api"
+                            ]
+                        }
+                    },
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "api/admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "api/admin/users",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "admin",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "last-wins-reversed-order-gives-other-level",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "api/admin"
+                            ]
+                        }
+                    },
+                    "client": {
+                        "match": {
+                            "prefix": [
+                                "api"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "api/admin/users",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": "client",
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": "client",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "unmatched-lenient-goes-unassigned",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "client/orders",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": null,
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "unmatched-strict-throws",
+                "strict": true,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": "a.b",
+                    "uri": "client/orders",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": {
+                    "code": "RF_BE_001",
+                    "httpStatus": 500,
+                    "message": "Route a.b (client/orders) has no tier assigned. Add ->tier(...) to the route or a match rule in config/forge.php, or disable strict_mode."
+                },
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "unmatched-strict-unnamed-null-name-interpolates-empty",
+                "strict": true,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": null,
+                    "uri": "client/orders",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "resolve",
+                "result": null,
+                "exception": {
+                    "code": "RF_BE_001",
+                    "httpStatus": 500,
+                    "message": "Route  (client/orders) has no tier assigned. Add ->tier(...) to the route or a match rule in config/forge.php, or disable strict_mode."
+                },
+                "warnings": [],
+                "probeParallel": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "probe-explicit",
+                "strict": false,
+                "levels": {
+                    "admin": []
+                },
+                "classifier": null,
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": "admin"
+                }
+            },
+            "expected": {
+                "mode": "probe",
+                "result": {
+                    "level": "admin",
+                    "source": "explicit",
+                    "requested": null,
+                    "error": null
+                },
+                "exception": null,
+                "warnings": []
+            }
+        },
+        {
+            "input": {
+                "name": "probe-explicit-unknown-level",
+                "strict": false,
+                "levels": {
+                    "admin": []
+                },
+                "classifier": null,
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": "ghost"
+                }
+            },
+            "expected": {
+                "mode": "probe",
+                "result": {
+                    "level": null,
+                    "source": "explicit-unknown-level",
+                    "requested": "ghost",
+                    "error": null
+                },
+                "exception": null,
+                "warnings": []
+            }
+        },
+        {
+            "input": {
+                "name": "probe-classifier-error",
+                "strict": false,
+                "levels": {
+                    "admin": []
+                },
+                "classifier": {
+                    "throw": "boom"
+                },
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "probe",
+                "result": {
+                    "level": null,
+                    "source": "classifier-error",
+                    "requested": null,
+                    "error": "RuntimeException: boom"
+                },
+                "exception": null,
+                "warnings": []
+            }
+        },
+        {
+            "input": {
+                "name": "probe-classifier-unknown-tier",
+                "strict": false,
+                "levels": {
+                    "admin": []
+                },
+                "classifier": {
+                    "return": "ghost"
+                },
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "probe",
+                "result": {
+                    "level": null,
+                    "source": "classifier-unknown-tier",
+                    "requested": "ghost",
+                    "error": null
+                },
+                "exception": null,
+                "warnings": []
+            }
+        },
+        {
+            "input": {
+                "name": "probe-match-hit",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "api"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "probe",
+                "result": {
+                    "level": "admin",
+                    "source": "match",
+                    "requested": null,
+                    "error": null
+                },
+                "exception": null,
+                "warnings": []
+            }
+        },
+        {
+            "input": {
+                "name": "probe-none",
+                "strict": false,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "probe",
+                "result": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                },
+                "exception": null,
+                "warnings": []
+            }
+        },
+        {
+            "input": {
+                "name": "probe-strict-mode-never-throws-on-unassigned",
+                "strict": true,
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": null
+                }
+            },
+            "expected": {
+                "mode": "probe",
+                "result": {
+                    "level": null,
+                    "source": "none",
+                    "requested": null,
+                    "error": null
+                },
+                "exception": null,
+                "warnings": []
+            }
+        },
+        {
+            "input": {
+                "name": "probe-strict-mode-never-throws-on-tier-without-name",
+                "strict": true,
+                "levels": {
+                    "admin": []
+                },
+                "classifier": null,
+                "route": {
+                    "name": null,
+                    "uri": "api/x",
+                    "middleware": [],
+                    "tier": "admin"
+                }
+            },
+            "expected": {
+                "mode": "probe",
+                "result": {
+                    "level": "admin",
+                    "source": "explicit",
+                    "requested": null,
+                    "error": null
+                },
+                "exception": null,
+                "warnings": []
+            }
+        }
+    ]
+}

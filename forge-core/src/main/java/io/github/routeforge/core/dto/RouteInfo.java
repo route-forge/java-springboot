@@ -1,5 +1,8 @@
 package io.github.routeforge.core.dto;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,12 +35,24 @@ public record RouteInfo(
         Object source) {
 
     public RouteInfo {
-        methods = List.copyOf(Objects.requireNonNull(methods, "methods"));
-        parameters = List.copyOf(Objects.requireNonNull(parameters, "parameters"));
-        parameterDefaults = Map.copyOf(Objects.requireNonNull(parameterDefaults, "parameterDefaults"));
-        middleware = List.copyOf(Objects.requireNonNull(middleware, "middleware"));
-        forgeAliases = List.copyOf(Objects.requireNonNull(forgeAliases, "forgeAliases"));
+        // 用 unmodifiable 包装而非 copyOf：PHP 侧的中间件/默认值集合允许 null 元素
+        // （如 parameter_defaults 里显式 null），copyOf 会 NPE，把归一化成崩在构造期。
+        methods = immutable(methods, "methods");
+        parameters = immutable(parameters, "parameters");
+        parameterDefaults = immutable(parameterDefaults, "parameterDefaults");
+        middleware = immutable(middleware, "middleware");
+        forgeAliases = immutable(forgeAliases, "forgeAliases");
         Objects.requireNonNull(uri, "uri");
+    }
+
+    private static <T> List<T> immutable(List<T> value, String field) {
+        Objects.requireNonNull(value, field);
+        return Collections.unmodifiableList(new ArrayList<>(value));
+    }
+
+    private static <K, V> Map<K, V> immutable(Map<K, V> value, String field) {
+        Objects.requireNonNull(value, field);
+        return Collections.unmodifiableMap(new LinkedHashMap<>(value));
     }
 
     /** 是否显式标注过层级（优先级链第 1、2 级的入口判据）。 */

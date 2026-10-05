@@ -32,6 +32,8 @@ subprojects {
         systemProperty("file.encoding", "UTF-8")
         systemProperty("stdout.encoding", "UTF-8")
         systemProperty("stderr.encoding", "UTF-8")
+        // PHP 参照器产物的位置（跨语言对等测试读取）。用绝对路径注入，避免各模块工作目录差异。
+        systemProperty("forge.fixtures.dir", rootProject.file("fixtures/php/expected").absolutePath)
         testLogging {
             events("failed", "skipped")
             exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

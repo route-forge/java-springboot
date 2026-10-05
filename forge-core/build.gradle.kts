@@ -11,5 +11,7 @@ dependencies {
     testImplementation(platform(libs.spring.boot.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
+    // 只为读取 PHP 参照器产出的 fixture；核心层主代码不依赖 Jackson
+    testImplementation(libs.jackson.databind)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

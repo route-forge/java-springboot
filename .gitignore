@@ -30,3 +30,6 @@ node_modules/
 # 临时产物一律落 F:/tmp，仓库内不应出现暂存目录
 /tmp/
 .staging/
+
+# oracle 重定向失误产生的杂散 stderr
+fixtures/php/*.err
