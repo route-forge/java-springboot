@@ -151,11 +151,24 @@ Java 侧落地口径：
 
 ## 6. 错误码
 
-沿用 `RF_BE_001`~`RF_BE_009` 与原文消息（跨语言一致），Java 专属新增：
+沿用 `RF_BE_001`~`RF_BE_009` 与原文消息（跨语言一致），Java 侧不实现 007、另新增 010：
 
 | code | 触发场景 | HTTP |
 |---|---|---|
-| `RF_BE_010` | 命名双通道（`@ForgeRoute` / `@Forge` / `RouteNamingStrategy`）对同一 handler 给出冲突事实 | 500 |
+| `RF_BE_001` | 单条语义保留：`TierResolver.resolve()` 直接调用时，严格模式下命名路由未归级 | 500 |
+| `RF_BE_002` | 请求的层级名不在 levels 配置中 | 404 |
+| `RF_BE_003` | 配置的 `cache-driver` 不可用 | 500 |
+| `RF_BE_004` | classifier 回调自身抛错（包装保留 cause） | 500 |
+| `RF_BE_005` | 单条语义保留：严格模式下设了层级却无路由名 | 500 |
+| `RF_BE_006` | classifier 返回的层级名不在 levels 配置中 | 500 |
+| — | **`RF_BE_007` 在 Spring 侧无对应物**：该码源于 PHP 的 Registrar 析构期告警（尾部链式属性丢弃），
+  Spring 的注解是声明期的、不存在「属性挂了但无人消费」的生命周期。码位保留、不复用、不实现 | — |
+| `RF_BE_008` | 别名指向的路由名不存在（悬空别名） | 500 |
+| `RF_BE_009` | 严格模式整表违规聚合（`missing_name` / `unassigned` 一次报全，`unresolved` 作信息附录） | 500 |
+| `RF_BE_010` | **Java 专属**：命名三通道对同一 handler 方法给出冲突事实（详见 §4.1） | 500 |
+
+`RF_BE_009` 的结构化 `violations` 仅在 `debug=true` 时随错误体下发（清单本身是宿主越界路由的名字与 URI 目录，
+属内部结构信息），与 Laravel 侧 `APP_DEBUG` 口径同构。
 
 ## 7. 测试矩阵
 
