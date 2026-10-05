@@ -1,0 +1,1352 @@
+{
+    "provenance": {
+        "generator": "fixtures/php/oracle-alias-strict.php",
+        "php": "8.5.11",
+        "phpCommonCommit": "f3fa70d",
+        "note": "expected 由真实 php-common 代码产出，Java 侧不得按文档自编断言"
+    },
+    "aliasCases": [
+        {
+            "input": {
+                "name": "macro-declaration-only",
+                "infos": [
+                    {
+                        "name": "admin.members.index",
+                        "uri": "admin/members",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "admin.users.index"
+                        ]
+                    }
+                ],
+                "config": {}
+            },
+            "expected": {
+                "aliases": {
+                    "admin.users.index": "admin.members.index"
+                },
+                "warnings": [],
+                "collisions": {},
+                "exception": null
+            }
+        },
+        {
+            "input": {
+                "name": "config-declaration-only",
+                "infos": [
+                    {
+                        "name": "admin.members.index",
+                        "uri": "admin/members",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ],
+                "config": {
+                    "admin.users.index": "admin.members.index"
+                }
+            },
+            "expected": {
+                "aliases": {
+                    "admin.users.index": "admin.members.index"
+                },
+                "warnings": [],
+                "collisions": {},
+                "exception": null
+            }
+        },
+        {
+            "input": {
+                "name": "macro-and-config-same-target-is-silent",
+                "infos": [
+                    {
+                        "name": "admin.members.index",
+                        "uri": "admin/members",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "admin.users.index"
+                        ]
+                    }
+                ],
+                "config": {
+                    "admin.users.index": "admin.members.index"
+                }
+            },
+            "expected": {
+                "aliases": {
+                    "admin.users.index": "admin.members.index"
+                },
+                "warnings": [],
+                "collisions": {},
+                "exception": null
+            }
+        },
+        {
+            "input": {
+                "name": "macro-wins-over-config-different-target",
+                "infos": [
+                    {
+                        "name": "admin.members.index",
+                        "uri": "admin/members",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "admin.users.index"
+                        ]
+                    }
+                ],
+                "config": {
+                    "admin.users.index": "admin.people.index"
+                }
+            },
+            "expected": {
+                "aliases": {
+                    "admin.users.index": "admin.members.index"
+                },
+                "warnings": [
+                    "Alias [admin.users.index] is declared both via ->forgeAlias() [→ admin.members.index] and config [→ admin.people.index]; the explicit macro wins."
+                ],
+                "collisions": {},
+                "exception": null
+            }
+        },
+        {
+            "input": {
+                "name": "macro-declared-on-multiple-routes-first-wins",
+                "infos": [
+                    {
+                        "name": "a.one",
+                        "uri": "a/one",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "legacy.name"
+                        ]
+                    },
+                    {
+                        "name": "a.two",
+                        "uri": "a/two",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "legacy.name"
+                        ]
+                    },
+                    {
+                        "name": "a.three",
+                        "uri": "a/three",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "legacy.name",
+                            "legacy.other"
+                        ]
+                    }
+                ],
+                "config": {}
+            },
+            "expected": {
+                "aliases": {
+                    "legacy.name": "a.one",
+                    "legacy.other": "a.three"
+                },
+                "warnings": [
+                    "Alias [legacy.name] is declared via ->forgeAlias() on multiple routes (a.one, a.two, a.three); the first declaration wins and the later ones are ignored."
+                ],
+                "collisions": {},
+                "exception": null
+            }
+        },
+        {
+            "input": {
+                "name": "macro-alias-collides-with-real-name",
+                "infos": [
+                    {
+                        "name": "real.name",
+                        "uri": "r/1",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "other.name",
+                        "uri": "o/1",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "real.name"
+                        ]
+                    }
+                ],
+                "config": {}
+            },
+            "expected": {
+                "aliases": {},
+                "warnings": [
+                    "Alias [real.name] collides with a real route name; the real route wins and the alias is ignored."
+                ],
+                "collisions": {
+                    "real.name": "other.name"
+                },
+                "exception": null
+            }
+        },
+        {
+            "input": {
+                "name": "config-alias-collides-with-real-name",
+                "infos": [
+                    {
+                        "name": "real.name",
+                        "uri": "r/1",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "other.name",
+                        "uri": "o/1",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "real.name"
+                        ]
+                    }
+                ],
+                "config": {
+                    "real.name": "other.name"
+                }
+            },
+            "expected": {
+                "aliases": {},
+                "warnings": [
+                    "Alias [real.name] collides with a real route name; the real route wins and the alias is ignored.",
+                    "Alias [real.name] collides with a real route name; the real route wins and the alias is ignored."
+                ],
+                "collisions": {
+                    "real.name": "other.name"
+                },
+                "exception": null
+            }
+        },
+        {
+            "input": {
+                "name": "alias-declared-on-unnamed-route-is-ignored-with-warning",
+                "infos": [
+                    {
+                        "name": "target.name",
+                        "uri": "t/1",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": null,
+                        "uri": "unnamed/route",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "legacy.name"
+                        ]
+                    }
+                ],
+                "config": {}
+            },
+            "expected": {
+                "aliases": {},
+                "warnings": [
+                    "Alias [legacy.name] is declared via ->forgeAlias() on an unnamed route (unnamed/route); the declaration is ignored because the route has no name. Add ->name(...) to the route or move the alias to a named route."
+                ],
+                "collisions": {},
+                "exception": null
+            }
+        },
+        {
+            "input": {
+                "name": "empty-alias-entry-skipped",
+                "infos": [
+                    {
+                        "name": "target.name",
+                        "uri": "t/1",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "",
+                            "legacy.name"
+                        ]
+                    }
+                ],
+                "config": {}
+            },
+            "expected": {
+                "aliases": {
+                    "legacy.name": "target.name"
+                },
+                "warnings": [],
+                "collisions": {},
+                "exception": null
+            }
+        },
+        {
+            "input": {
+                "name": "alias-chains-are-not-followed",
+                "infos": [
+                    {
+                        "name": "a.real",
+                        "uri": "a/1",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "a.alias"
+                        ]
+                    }
+                ],
+                "config": {
+                    "a.other": "a.alias"
+                }
+            },
+            "expected": {
+                "exception": {
+                    "code": "RF_BE_008",
+                    "httpStatus": 500,
+                    "message": "Alias [a.other] points to route name [a.alias], which does not exist in the current route table. Update or remove the alias in config/forge.php or the ->forgeAlias() declaration."
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "alias-targeting-excluded-route-is-dangling",
+                "infos": [
+                    {
+                        "name": "client.orders.index",
+                        "uri": "client/orders",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ],
+                "config": {
+                    "old.orders": "forge.routes.admin"
+                }
+            },
+            "expected": {
+                "exception": {
+                    "code": "RF_BE_008",
+                    "httpStatus": 500,
+                    "message": "Alias [old.orders] points to route name [forge.routes.admin], which does not exist in the current route table. Update or remove the alias in config/forge.php or the ->forgeAlias() declaration."
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "dangling-alias-throws",
+                "infos": [
+                    {
+                        "name": "client.orders.index",
+                        "uri": "client/orders",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ],
+                "config": {
+                    "old.orders": "client.orders.list"
+                }
+            },
+            "expected": {
+                "exception": {
+                    "code": "RF_BE_008",
+                    "httpStatus": 500,
+                    "message": "Alias [old.orders] points to route name [client.orders.list], which does not exist in the current route table. Update or remove the alias in config/forge.php or the ->forgeAlias() declaration."
+                }
+            }
+        },
+        {
+            "input": {
+                "name": "invalid-config-alias-shape",
+                "infos": [
+                    {
+                        "name": "a.b",
+                        "uri": "a/b",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ],
+                "config": {
+                    "legacy.name": ""
+                }
+            },
+            "expected": {
+                "plainException": "InvalidArgumentException",
+                "message": "forge.aliases must be a map of [alias(string) => route name(string)]; got ['legacy.name' => '']"
+            }
+        },
+        {
+            "input": {
+                "name": "multiple-aliases-to-same-target",
+                "infos": [
+                    {
+                        "name": "v2.route",
+                        "uri": "v2/route",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "v1.route",
+                            "legacy.route"
+                        ]
+                    }
+                ],
+                "config": {}
+            },
+            "expected": {
+                "aliases": {
+                    "v1.route": "v2.route",
+                    "legacy.route": "v2.route"
+                },
+                "warnings": [],
+                "collisions": {},
+                "exception": null
+            }
+        }
+    ],
+    "strictCases": [
+        {
+            "input": {
+                "name": "named-unassigned-only",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": "client.orders",
+                        "uri": "client/orders",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [],
+                    "unassigned": [
+                        {
+                            "name": "client.orders",
+                            "uri": "client/orders",
+                            "methods": [
+                                "GET",
+                                "HEAD"
+                            ],
+                            "middleware": []
+                        }
+                    ],
+                    "unresolved": []
+                },
+                "count": 1,
+                "lines": [
+                    "Route Forge strict_mode found 1 route configuration problem(s):",
+                    "  1 named route(s) are not matched by any level rule (add ->tier(...), a match rule in config, or let the classifier return a level):",
+                    "    - client.orders (GET client/orders)"
+                ],
+                "message": "Route Forge strict_mode found 1 route configuration problem(s):\n  1 named route(s) are not matched by any level rule (add ->tier(...), a match rule in config, or let the classifier return a level):\n    - client.orders (GET client/orders)",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "unnamed-matched-by-config-goes-missing-name",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "api"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "api/reports",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "auth"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [
+                        {
+                            "uri": "api/reports",
+                            "methods": [
+                                "GET",
+                                "HEAD"
+                            ],
+                            "level": "admin",
+                            "source": "match"
+                        }
+                    ],
+                    "unassigned": [],
+                    "unresolved": []
+                },
+                "count": 1,
+                "lines": [
+                    "Route Forge strict_mode found 1 route configuration problem(s):",
+                    "  1 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:",
+                    "    - GET api/reports -> level [admin] via a config match rule"
+                ],
+                "message": "Route Forge strict_mode found 1 route configuration problem(s):\n  1 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:\n    - GET api/reports -> level [admin] via a config match rule",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "unnamed-explicit-tier-goes-missing-name",
+                "levels": {
+                    "admin": []
+                },
+                "classifier": null,
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "api/x",
+                        "methods": [
+                            "POST"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": "admin",
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [
+                        {
+                            "uri": "api/x",
+                            "methods": [
+                                "POST"
+                            ],
+                            "level": "admin",
+                            "source": "explicit"
+                        }
+                    ],
+                    "unassigned": [],
+                    "unresolved": []
+                },
+                "count": 1,
+                "lines": [
+                    "Route Forge strict_mode found 1 route configuration problem(s):",
+                    "  1 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:",
+                    "    - POST api/x -> level [admin] via explicit ->tier()"
+                ],
+                "message": "Route Forge strict_mode found 1 route configuration problem(s):\n  1 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:\n    - POST api/x -> level [admin] via explicit ->tier()",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "unnamed-via-classifier",
+                "levels": {
+                    "admin": [],
+                    "client": []
+                },
+                "classifier": {
+                    "return": "client"
+                },
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "weird/path",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [
+                        {
+                            "uri": "weird/path",
+                            "methods": [
+                                "GET",
+                                "HEAD"
+                            ],
+                            "level": "client",
+                            "source": "classifier"
+                        }
+                    ],
+                    "unassigned": [],
+                    "unresolved": []
+                },
+                "count": 1,
+                "lines": [
+                    "Route Forge strict_mode found 1 route configuration problem(s):",
+                    "  1 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:",
+                    "    - GET weird/path -> level [client] via the classifier callback"
+                ],
+                "message": "Route Forge strict_mode found 1 route configuration problem(s):\n  1 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:\n    - GET weird/path -> level [client] via the classifier callback",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "unnamed-and-unmatched-is-out-of-scope",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "vendor/package/route",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [],
+                    "unassigned": [],
+                    "unresolved": []
+                },
+                "count": 0,
+                "lines": [
+                    "Route Forge strict_mode found 0 route configuration problem(s):"
+                ],
+                "message": "Route Forge strict_mode found 0 route configuration problem(s):",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "unnamed-with-unknown-tier-is-unresolved",
+                "levels": {
+                    "admin": []
+                },
+                "classifier": null,
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "api/x",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": "ghost",
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [],
+                    "unassigned": [],
+                    "unresolved": [
+                        {
+                            "name": null,
+                            "uri": "api/x",
+                            "reason": "declares tier [ghost] which is not defined in levels config"
+                        }
+                    ]
+                },
+                "count": 0,
+                "lines": [
+                    "Route Forge strict_mode found 0 route configuration problem(s):",
+                    "  1 route(s) could not be resolved at all (invalid tier name or classifier failure — reported by their own error code):",
+                    "    - (api/x) declares tier [ghost] which is not defined in levels config"
+                ],
+                "message": "Route Forge strict_mode found 0 route configuration problem(s):\n  1 route(s) could not be resolved at all (invalid tier name or classifier failure — reported by their own error code):\n    - (api/x) declares tier [ghost] which is not defined in levels config",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "unnamed-with-classifier-error-is-unresolved",
+                "levels": {
+                    "admin": []
+                },
+                "classifier": {
+                    "throw": "boom"
+                },
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "api/x",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [],
+                    "unassigned": [],
+                    "unresolved": [
+                        {
+                            "name": null,
+                            "uri": "api/x",
+                            "reason": "classifier callback threw: RuntimeException: boom"
+                        }
+                    ]
+                },
+                "count": 0,
+                "lines": [
+                    "Route Forge strict_mode found 0 route configuration problem(s):",
+                    "  1 route(s) could not be resolved at all (invalid tier name or classifier failure — reported by their own error code):",
+                    "    - (api/x) classifier callback threw: RuntimeException: boom"
+                ],
+                "message": "Route Forge strict_mode found 0 route configuration problem(s):\n  1 route(s) could not be resolved at all (invalid tier name or classifier failure — reported by their own error code):\n    - (api/x) classifier callback threw: RuntimeException: boom",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "unnamed-with-classifier-unknown-tier-is-unresolved",
+                "levels": {
+                    "admin": []
+                },
+                "classifier": {
+                    "return": "ghost"
+                },
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "api/x",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [],
+                    "unassigned": [],
+                    "unresolved": [
+                        {
+                            "name": null,
+                            "uri": "api/x",
+                            "reason": "gets tier [ghost] from the classifier, which is not defined in levels config"
+                        }
+                    ]
+                },
+                "count": 0,
+                "lines": [
+                    "Route Forge strict_mode found 0 route configuration problem(s):",
+                    "  1 route(s) could not be resolved at all (invalid tier name or classifier failure — reported by their own error code):",
+                    "    - (api/x) gets tier [ghost] from the classifier, which is not defined in levels config"
+                ],
+                "message": "Route Forge strict_mode found 0 route configuration problem(s):\n  1 route(s) could not be resolved at all (invalid tier name or classifier failure — reported by their own error code):\n    - (api/x) gets tier [ghost] from the classifier, which is not defined in levels config",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "named-with-unknown-tier-is-unresolved-not-unassigned",
+                "levels": {
+                    "admin": []
+                },
+                "classifier": null,
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": "a.b",
+                        "uri": "api/x",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": "ghost",
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [],
+                    "unassigned": [],
+                    "unresolved": [
+                        {
+                            "name": "a.b",
+                            "uri": "api/x",
+                            "reason": "declares tier [ghost] which is not defined in levels config"
+                        }
+                    ]
+                },
+                "count": 0,
+                "lines": [
+                    "Route Forge strict_mode found 0 route configuration problem(s):",
+                    "  1 route(s) could not be resolved at all (invalid tier name or classifier failure — reported by their own error code):",
+                    "    - a.b (api/x) declares tier [ghost] which is not defined in levels config"
+                ],
+                "message": "Route Forge strict_mode found 0 route configuration problem(s):\n  1 route(s) could not be resolved at all (invalid tier name or classifier failure — reported by their own error code):\n    - a.b (api/x) declares tier [ghost] which is not defined in levels config",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "forge-own-endpoints-are-excluded-by-uri",
+                "levels": {
+                    "manage": {
+                        "match": {
+                            "middleware": [
+                                "manage"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "uriPrefixes": [
+                    "/_forge/routes"
+                ],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "_forge/routes/manage",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "manage"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": null,
+                        "uri": "manage/reports",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "manage"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [
+                        {
+                            "uri": "manage/reports",
+                            "methods": [
+                                "GET",
+                                "HEAD"
+                            ],
+                            "level": "manage",
+                            "source": "match"
+                        }
+                    ],
+                    "unassigned": [],
+                    "unresolved": []
+                },
+                "count": 1,
+                "lines": [
+                    "Route Forge strict_mode found 1 route configuration problem(s):",
+                    "  1 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:",
+                    "    - GET manage/reports -> level [manage] via a config match rule"
+                ],
+                "message": "Route Forge strict_mode found 1 route configuration problem(s):\n  1 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:\n    - GET manage/reports -> level [manage] via a config match rule",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "named-forge-routes-excluded-by-name",
+                "levels": {
+                    "manage": {
+                        "match": {
+                            "prefix": [
+                                "nope"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": "forge.routes.manage",
+                        "uri": "nope/x",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "storage.local",
+                        "uri": "storage/x",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [],
+                    "unassigned": [
+                        {
+                            "name": "storage.local",
+                            "uri": "storage/x",
+                            "methods": [
+                                "GET",
+                                "HEAD"
+                            ],
+                            "middleware": []
+                        }
+                    ],
+                    "unresolved": []
+                },
+                "count": 1,
+                "lines": [
+                    "Route Forge strict_mode found 1 route configuration problem(s):",
+                    "  1 named route(s) are not matched by any level rule (add ->tier(...), a match rule in config, or let the classifier return a level):",
+                    "    - storage.local (GET storage/x)"
+                ],
+                "message": "Route Forge strict_mode found 1 route configuration problem(s):\n  1 named route(s) are not matched by any level rule (add ->tier(...), a match rule in config, or let the classifier return a level):\n    - storage.local (GET storage/x)",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "sorting-and-counting-with-mixed-groups",
+                "levels": {
+                    "zzz": {
+                        "match": {
+                            "prefix": [
+                                "zzz"
+                            ]
+                        }
+                    },
+                    "aaa": {
+                        "match": {
+                            "prefix": [
+                                "aaa"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "zzz/2",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": null,
+                        "uri": "aaa/1",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "b.name",
+                        "uri": "unmatched/b",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "a.name",
+                        "uri": "unmatched/a",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "z.name",
+                        "uri": "unmatched/z",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": "ghost",
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": null,
+                        "uri": "aaa/0",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": "ghost",
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [
+                        {
+                            "uri": "aaa/1",
+                            "methods": [
+                                "GET",
+                                "HEAD"
+                            ],
+                            "level": "aaa",
+                            "source": "match"
+                        },
+                        {
+                            "uri": "zzz/2",
+                            "methods": [
+                                "GET",
+                                "HEAD"
+                            ],
+                            "level": "zzz",
+                            "source": "match"
+                        }
+                    ],
+                    "unassigned": [
+                        {
+                            "name": "a.name",
+                            "uri": "unmatched/a",
+                            "methods": [
+                                "GET",
+                                "HEAD"
+                            ],
+                            "middleware": []
+                        },
+                        {
+                            "name": "b.name",
+                            "uri": "unmatched/b",
+                            "methods": [
+                                "GET",
+                                "HEAD"
+                            ],
+                            "middleware": []
+                        }
+                    ],
+                    "unresolved": [
+                        {
+                            "name": null,
+                            "uri": "aaa/0",
+                            "reason": "declares tier [ghost] which is not defined in levels config"
+                        },
+                        {
+                            "name": "z.name",
+                            "uri": "unmatched/z",
+                            "reason": "declares tier [ghost] which is not defined in levels config"
+                        }
+                    ]
+                },
+                "count": 4,
+                "lines": [
+                    "Route Forge strict_mode found 4 route configuration problem(s):",
+                    "  2 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:",
+                    "    - GET aaa/1 -> level [aaa] via a config match rule",
+                    "    - GET zzz/2 -> level [zzz] via a config match rule",
+                    "  2 named route(s) are not matched by any level rule (add ->tier(...), a match rule in config, or let the classifier return a level):",
+                    "    - a.name (GET unmatched/a)",
+                    "    - b.name (GET unmatched/b)",
+                    "  2 route(s) could not be resolved at all (invalid tier name or classifier failure — reported by their own error code):",
+                    "    - (aaa/0) declares tier [ghost] which is not defined in levels config",
+                    "    - z.name (unmatched/z) declares tier [ghost] which is not defined in levels config"
+                ],
+                "message": "Route Forge strict_mode found 4 route configuration problem(s):\n  2 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:\n    - GET aaa/1 -> level [aaa] via a config match rule\n    - GET zzz/2 -> level [zzz] via a config match rule\n  2 named route(s) are not matched by any level rule (add ->tier(...), a match rule in config, or let the classifier return a level):\n    - a.name (GET unmatched/a)\n    - b.name (GET unmatched/b)\n  2 route(s) could not be resolved at all (invalid tier name or classifier failure — reported by their own error code):\n    - (aaa/0) declares tier [ghost] which is not defined in levels config\n    - z.name (unmatched/z) declares tier [ghost] which is not defined in levels config",
+                "memoized": true
+            }
+        },
+        {
+            "input": {
+                "name": "all-clean",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "classifier": null,
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "violations": {
+                    "missing_name": [],
+                    "unassigned": [],
+                    "unresolved": []
+                },
+                "count": 0,
+                "lines": [
+                    "Route Forge strict_mode found 0 route configuration problem(s):"
+                ],
+                "message": "Route Forge strict_mode found 0 route configuration problem(s):",
+                "memoized": true
+            }
+        }
+    ]
+}
