@@ -1,0 +1,893 @@
+{
+    "provenance": {
+        "generator": "fixtures/php/oracle-analyzer.php",
+        "php": "8.5.11",
+        "phpCommonCommit": "f3fa70d",
+        "note": "expected 由真实 php-common 代码产出，Java 侧不得按文档自编断言"
+    },
+    "cases": [
+        {
+            "name": "mixed-named-and-unnamed",
+            "input": {
+                "name": "mixed-named-and-unnamed",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    },
+                    "client": {
+                        "match": {
+                            "middleware": [
+                                "auth"
+                            ]
+                        }
+                    },
+                    "empty": {
+                        "match": {
+                            "prefix": [
+                                "never-used-prefix"
+                            ]
+                        }
+                    }
+                },
+                "strict": false,
+                "classifier": null,
+                "aliases": {},
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": "admin.users.index",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "client.orders.index",
+                        "uri": "client/orders",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "auth"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "loose.route",
+                        "uri": "loose/route",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": null,
+                        "uri": "admin/unnamed",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": null,
+                        "uri": "other/unnamed",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": null,
+                        "uri": "client/unnamed",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "auth"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "outputs": {
+                "analyzeRoutesSameAsAnalyze": true,
+                "rows": "[{\"name\":\"admin.users.index\",\"level\":\"admin\",\"uri\":\"admin/users\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"admin\",\"alias_of\":null},{\"name\":\"client.orders.index\",\"level\":\"client\",\"uri\":\"client/orders\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[\"auth\"],\"tier\":\"client\",\"alias_of\":null},{\"name\":\"loose.route\",\"level\":\"unassigned\",\"uri\":\"loose/route\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":null,\"alias_of\":null}]",
+                "tier_counts": "{\"admin\":1,\"client\":1,\"unassigned\":1}",
+                "warnings": "[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET; middleware: auth]\"]",
+                "aliases": "{}",
+                "collisions": "{}",
+                "unnamed": "[{\"uri\":\"admin/unnamed\",\"methods\":[\"GET\"],\"middleware\":[],\"level\":\"admin\",\"source\":\"match\",\"tier\":null,\"requested\":null,\"error\":null},{\"uri\":\"other/unnamed\",\"methods\":[\"GET\"],\"middleware\":[],\"level\":null,\"source\":\"none\",\"tier\":null,\"requested\":null,\"error\":null},{\"uri\":\"client/unnamed\",\"methods\":[\"GET\"],\"middleware\":[\"auth\"],\"level\":\"client\",\"source\":\"match\",\"tier\":null,\"requested\":null,\"error\":null}]",
+                "violations": "{\"missing_name\":[],\"unassigned\":[],\"unresolved\":[]}",
+                "violationCount": "0",
+                "unnamedWarnings": "[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET; middleware: auth]\"]",
+                "formatUnnamed#0:all": "[\"3 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [admin]:\",\"  - Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\",\"1 unnamed route(s) in group [client]:\",\"  - Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET; middleware: auth]\",\"1 unnamed route(s) in group [unassigned]:\",\"  - Route (other/unnamed) is not matched by any tier rule and has no route name; naming is optional while it stays outside every level. [GET]\"]",
+                "formatUnnamed#1:admin": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [admin]:\",\"  - Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\"]",
+                "formatUnnamed#2:client": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [client]:\",\"  - Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET; middleware: auth]\"]",
+                "formatUnnamed#3:empty": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#4:unassigned": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [unassigned]:\",\"  - Route (other/unnamed) is not matched by any tier rule and has no route name; naming is optional while it stays outside every level. [GET]\"]",
+                "formatUnnamed#5:unresolved": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#6:不存在的层级": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "listPayload#0": "{\"levels\":[\"admin\",\"client\",\"empty\",\"unassigned\"],\"filter\":null,\"count\":3,\"tier_counts\":{\"admin\":1,\"client\":1,\"empty\":0,\"unassigned\":1},\"warnings\":[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET; middleware: auth]\"],\"routes\":[{\"name\":\"admin.users.index\",\"level\":\"admin\",\"methods\":[\"GET\"],\"uri\":\"admin/users\",\"alias_of\":null},{\"name\":\"client.orders.index\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/orders\",\"alias_of\":null},{\"name\":\"loose.route\",\"level\":\"unassigned\",\"methods\":[\"GET\"],\"uri\":\"loose/route\",\"alias_of\":null}]}",
+                "listPayload#1": "{\"levels\":[\"admin\",\"client\",\"empty\",\"unassigned\"],\"filter\":{\"level\":\"admin\"},\"count\":1,\"tier_counts\":{\"admin\":1,\"client\":1,\"empty\":0,\"unassigned\":1},\"warnings\":[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET; middleware: auth]\"],\"routes\":[{\"name\":\"admin.users.index\",\"level\":\"admin\",\"methods\":[\"GET\"],\"uri\":\"admin/users\",\"alias_of\":null}]}",
+                "listPayload#2": "{\"levels\":[\"admin\",\"client\",\"empty\",\"unassigned\"],\"filter\":{\"unassigned\":true},\"count\":1,\"tier_counts\":{\"admin\":1,\"client\":1,\"empty\":0,\"unassigned\":1},\"warnings\":[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET; middleware: auth]\"],\"routes\":[{\"name\":\"loose.route\",\"level\":\"unassigned\",\"methods\":[\"GET\"],\"uri\":\"loose/route\",\"alias_of\":null}]}",
+                "listPayload#3": "{\"levels\":[\"admin\",\"client\",\"empty\",\"unassigned\"],\"filter\":{\"aliases\":true},\"count\":0,\"tier_counts\":{\"admin\":1,\"client\":1,\"empty\":0,\"unassigned\":1},\"warnings\":[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET; middleware: auth]\"],\"routes\":[]}",
+                "listPayload#4": "{\"levels\":[\"admin\",\"client\",\"empty\",\"unassigned\"],\"filter\":{\"level\":\"unassigned\",\"unassigned\":true},\"count\":1,\"tier_counts\":{\"admin\":1,\"client\":1,\"empty\":0,\"unassigned\":1},\"warnings\":[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET; middleware: auth]\"],\"routes\":[{\"name\":\"loose.route\",\"level\":\"unassigned\",\"methods\":[\"GET\"],\"uri\":\"loose/route\",\"alias_of\":null}]}"
+            },
+            "errors": []
+        },
+        {
+            "name": "unnamed-sources",
+            "input": {
+                "name": "unnamed-sources",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    },
+                    "client": []
+                },
+                "strict": false,
+                "classifier": {
+                    "return": "client"
+                },
+                "aliases": {},
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "x/one",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "named.one",
+                        "uri": "x/two",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "outputs": {
+                "analyzeRoutesSameAsAnalyze": true,
+                "rows": "[{\"name\":\"named.one\",\"level\":\"client\",\"uri\":\"x/two\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"client\",\"alias_of\":null}]",
+                "tier_counts": "{\"client\":1}",
+                "warnings": "[\"Route (x/one) is assigned to level [client] by the classifier callback but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or make the classifier return null for it. [GET]\"]",
+                "aliases": "{}",
+                "collisions": "{}",
+                "unnamed": "[{\"uri\":\"x/one\",\"methods\":[\"GET\"],\"middleware\":[],\"level\":\"client\",\"source\":\"classifier\",\"tier\":null,\"requested\":null,\"error\":null}]",
+                "violations": "{\"missing_name\":[],\"unassigned\":[],\"unresolved\":[]}",
+                "violationCount": "0",
+                "unnamedWarnings": "[\"Route (x/one) is assigned to level [client] by the classifier callback but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or make the classifier return null for it. [GET]\"]",
+                "formatUnnamed#0:all": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [client]:\",\"  - Route (x/one) is assigned to level [client] by the classifier callback but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or make the classifier return null for it. [GET]\"]",
+                "formatUnnamed#1:admin": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#2:client": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [client]:\",\"  - Route (x/one) is assigned to level [client] by the classifier callback but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or make the classifier return null for it. [GET]\"]",
+                "formatUnnamed#3:unassigned": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#4:unresolved": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#5:不存在的层级": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "listPayload#0": "{\"levels\":[\"admin\",\"client\",\"unassigned\"],\"filter\":null,\"count\":1,\"tier_counts\":{\"admin\":0,\"client\":1,\"unassigned\":0},\"warnings\":[\"Route (x/one) is assigned to level [client] by the classifier callback but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or make the classifier return null for it. [GET]\"],\"routes\":[{\"name\":\"named.one\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"x/two\",\"alias_of\":null}]}",
+                "listPayload#1": "{\"levels\":[\"admin\",\"client\",\"unassigned\"],\"filter\":{\"level\":\"admin\"},\"count\":0,\"tier_counts\":{\"admin\":0,\"client\":1,\"unassigned\":0},\"warnings\":[\"Route (x/one) is assigned to level [client] by the classifier callback but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or make the classifier return null for it. [GET]\"],\"routes\":[]}",
+                "listPayload#2": "{\"levels\":[\"admin\",\"client\",\"unassigned\"],\"filter\":{\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"client\":1,\"unassigned\":0},\"warnings\":[\"Route (x/one) is assigned to level [client] by the classifier callback but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or make the classifier return null for it. [GET]\"],\"routes\":[]}",
+                "listPayload#3": "{\"levels\":[\"admin\",\"client\",\"unassigned\"],\"filter\":{\"aliases\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"client\":1,\"unassigned\":0},\"warnings\":[\"Route (x/one) is assigned to level [client] by the classifier callback but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or make the classifier return null for it. [GET]\"],\"routes\":[]}",
+                "listPayload#4": "{\"levels\":[\"admin\",\"client\",\"unassigned\"],\"filter\":{\"level\":\"unassigned\",\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"client\":1,\"unassigned\":0},\"warnings\":[\"Route (x/one) is assigned to level [client] by the classifier callback but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or make the classifier return null for it. [GET]\"],\"routes\":[]}"
+            },
+            "errors": []
+        },
+        {
+            "name": "unnamed-explicit-tier",
+            "input": {
+                "name": "unnamed-explicit-tier",
+                "levels": {
+                    "admin": []
+                },
+                "strict": false,
+                "classifier": null,
+                "aliases": {},
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "x/one",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": "admin",
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "outputs": {
+                "analyzeRoutesSameAsAnalyze": true,
+                "rows": "[]",
+                "tier_counts": "[]",
+                "warnings": "[\"Route (x/one) has tier [admin] but no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or remove the tier. [GET]\"]",
+                "aliases": "{}",
+                "collisions": "{}",
+                "unnamed": "[{\"uri\":\"x/one\",\"methods\":[\"GET\"],\"middleware\":[],\"level\":\"admin\",\"source\":\"explicit\",\"tier\":\"admin\",\"requested\":null,\"error\":null}]",
+                "violations": "{\"missing_name\":[],\"unassigned\":[],\"unresolved\":[]}",
+                "violationCount": "0",
+                "unnamedWarnings": "[\"Route (x/one) has tier [admin] but no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or remove the tier. [GET]\"]",
+                "formatUnnamed#0:all": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [admin]:\",\"  - Route (x/one) has tier [admin] but no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or remove the tier. [GET]\"]",
+                "formatUnnamed#1:admin": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [admin]:\",\"  - Route (x/one) has tier [admin] but no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or remove the tier. [GET]\"]",
+                "formatUnnamed#2:unassigned": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#3:unresolved": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#4:不存在的层级": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "listPayload#0": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":null,\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) has tier [admin] but no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or remove the tier. [GET]\"],\"routes\":[]}",
+                "listPayload#1": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"level\":\"admin\"},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) has tier [admin] but no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or remove the tier. [GET]\"],\"routes\":[]}",
+                "listPayload#2": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) has tier [admin] but no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or remove the tier. [GET]\"],\"routes\":[]}",
+                "listPayload#3": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"aliases\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) has tier [admin] but no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or remove the tier. [GET]\"],\"routes\":[]}",
+                "listPayload#4": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"level\":\"unassigned\",\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) has tier [admin] but no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or remove the tier. [GET]\"],\"routes\":[]}"
+            },
+            "errors": []
+        },
+        {
+            "name": "unnamed-unknown-tier",
+            "input": {
+                "name": "unnamed-unknown-tier",
+                "levels": {
+                    "admin": []
+                },
+                "strict": false,
+                "classifier": null,
+                "aliases": {},
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "x/one",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": "ghost",
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "outputs": {
+                "analyzeRoutesSameAsAnalyze": true,
+                "rows": "[]",
+                "tier_counts": "[]",
+                "warnings": "[\"Route (x/one) declares tier [ghost] which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the tier name and add ->name(...), or remove the tier. [GET]\"]",
+                "aliases": "{}",
+                "collisions": "{}",
+                "unnamed": "[{\"uri\":\"x/one\",\"methods\":[\"GET\"],\"middleware\":[],\"level\":null,\"source\":\"explicit-unknown-level\",\"tier\":\"ghost\",\"requested\":\"ghost\",\"error\":null}]",
+                "violations": "{\"missing_name\":[],\"unassigned\":[],\"unresolved\":[]}",
+                "violationCount": "0",
+                "unnamedWarnings": "[\"Route (x/one) declares tier [ghost] which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the tier name and add ->name(...), or remove the tier. [GET]\"]",
+                "formatUnnamed#0:all": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [unresolved]:\",\"  - Route (x/one) declares tier [ghost] which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the tier name and add ->name(...), or remove the tier. [GET]\"]",
+                "formatUnnamed#1:admin": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#2:unassigned": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#3:unresolved": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [unresolved]:\",\"  - Route (x/one) declares tier [ghost] which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the tier name and add ->name(...), or remove the tier. [GET]\"]",
+                "formatUnnamed#4:不存在的层级": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "listPayload#0": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":null,\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) declares tier [ghost] which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the tier name and add ->name(...), or remove the tier. [GET]\"],\"routes\":[]}",
+                "listPayload#1": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"level\":\"admin\"},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) declares tier [ghost] which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the tier name and add ->name(...), or remove the tier. [GET]\"],\"routes\":[]}",
+                "listPayload#2": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) declares tier [ghost] which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the tier name and add ->name(...), or remove the tier. [GET]\"],\"routes\":[]}",
+                "listPayload#3": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"aliases\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) declares tier [ghost] which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the tier name and add ->name(...), or remove the tier. [GET]\"],\"routes\":[]}",
+                "listPayload#4": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"level\":\"unassigned\",\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) declares tier [ghost] which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the tier name and add ->name(...), or remove the tier. [GET]\"],\"routes\":[]}"
+            },
+            "errors": []
+        },
+        {
+            "name": "unnamed-classifier-error",
+            "input": {
+                "name": "unnamed-classifier-error",
+                "levels": {
+                    "admin": []
+                },
+                "strict": false,
+                "classifier": {
+                    "throw": "boom"
+                },
+                "aliases": {},
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "x/one",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "outputs": {
+                "analyzeRoutesSameAsAnalyze": true,
+                "rows": "[]",
+                "tier_counts": "[]",
+                "warnings": "[\"Route (x/one) could not be resolved because the classifier callback threw: RuntimeException: boom — and it has no route name, so it appears in no forge output. Fix the classifier or add ->name(...). [GET]\"]",
+                "aliases": "{}",
+                "collisions": "{}",
+                "unnamed": "[{\"uri\":\"x/one\",\"methods\":[\"GET\"],\"middleware\":[],\"level\":null,\"source\":\"classifier-error\",\"tier\":null,\"requested\":null,\"error\":\"RuntimeException: boom\"}]",
+                "violations": "{\"missing_name\":[],\"unassigned\":[],\"unresolved\":[]}",
+                "violationCount": "0",
+                "unnamedWarnings": "[\"Route (x/one) could not be resolved because the classifier callback threw: RuntimeException: boom — and it has no route name, so it appears in no forge output. Fix the classifier or add ->name(...). [GET]\"]",
+                "formatUnnamed#0:all": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [unresolved]:\",\"  - Route (x/one) could not be resolved because the classifier callback threw: RuntimeException: boom — and it has no route name, so it appears in no forge output. Fix the classifier or add ->name(...). [GET]\"]",
+                "formatUnnamed#1:admin": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#2:unassigned": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#3:unresolved": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [unresolved]:\",\"  - Route (x/one) could not be resolved because the classifier callback threw: RuntimeException: boom — and it has no route name, so it appears in no forge output. Fix the classifier or add ->name(...). [GET]\"]",
+                "formatUnnamed#4:不存在的层级": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "listPayload#0": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":null,\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) could not be resolved because the classifier callback threw: RuntimeException: boom — and it has no route name, so it appears in no forge output. Fix the classifier or add ->name(...). [GET]\"],\"routes\":[]}",
+                "listPayload#1": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"level\":\"admin\"},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) could not be resolved because the classifier callback threw: RuntimeException: boom — and it has no route name, so it appears in no forge output. Fix the classifier or add ->name(...). [GET]\"],\"routes\":[]}",
+                "listPayload#2": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) could not be resolved because the classifier callback threw: RuntimeException: boom — and it has no route name, so it appears in no forge output. Fix the classifier or add ->name(...). [GET]\"],\"routes\":[]}",
+                "listPayload#3": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"aliases\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) could not be resolved because the classifier callback threw: RuntimeException: boom — and it has no route name, so it appears in no forge output. Fix the classifier or add ->name(...). [GET]\"],\"routes\":[]}",
+                "listPayload#4": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"level\":\"unassigned\",\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) could not be resolved because the classifier callback threw: RuntimeException: boom — and it has no route name, so it appears in no forge output. Fix the classifier or add ->name(...). [GET]\"],\"routes\":[]}"
+            },
+            "errors": []
+        },
+        {
+            "name": "unnamed-classifier-unknown-tier",
+            "input": {
+                "name": "unnamed-classifier-unknown-tier",
+                "levels": {
+                    "admin": []
+                },
+                "strict": false,
+                "classifier": {
+                    "return": "ghost"
+                },
+                "aliases": {},
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "x/one",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "outputs": {
+                "analyzeRoutesSameAsAnalyze": true,
+                "rows": "[]",
+                "tier_counts": "[]",
+                "warnings": "[\"Route (x/one) gets tier [ghost] from the classifier callback, which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the classifier result and add ->name(...). [GET]\"]",
+                "aliases": "{}",
+                "collisions": "{}",
+                "unnamed": "[{\"uri\":\"x/one\",\"methods\":[\"GET\"],\"middleware\":[],\"level\":null,\"source\":\"classifier-unknown-tier\",\"tier\":null,\"requested\":\"ghost\",\"error\":null}]",
+                "violations": "{\"missing_name\":[],\"unassigned\":[],\"unresolved\":[]}",
+                "violationCount": "0",
+                "unnamedWarnings": "[\"Route (x/one) gets tier [ghost] from the classifier callback, which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the classifier result and add ->name(...). [GET]\"]",
+                "formatUnnamed#0:all": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [unresolved]:\",\"  - Route (x/one) gets tier [ghost] from the classifier callback, which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the classifier result and add ->name(...). [GET]\"]",
+                "formatUnnamed#1:admin": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#2:unassigned": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#3:unresolved": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [unresolved]:\",\"  - Route (x/one) gets tier [ghost] from the classifier callback, which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the classifier result and add ->name(...). [GET]\"]",
+                "formatUnnamed#4:不存在的层级": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "listPayload#0": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":null,\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) gets tier [ghost] from the classifier callback, which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the classifier result and add ->name(...). [GET]\"],\"routes\":[]}",
+                "listPayload#1": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"level\":\"admin\"},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) gets tier [ghost] from the classifier callback, which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the classifier result and add ->name(...). [GET]\"],\"routes\":[]}",
+                "listPayload#2": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) gets tier [ghost] from the classifier callback, which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the classifier result and add ->name(...). [GET]\"],\"routes\":[]}",
+                "listPayload#3": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"aliases\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) gets tier [ghost] from the classifier callback, which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the classifier result and add ->name(...). [GET]\"],\"routes\":[]}",
+                "listPayload#4": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"level\":\"unassigned\",\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":0,\"unassigned\":0},\"warnings\":[\"Route (x/one) gets tier [ghost] from the classifier callback, which is not defined in levels config, and has no route name assigned; it is invisible to every forge output. Fix the classifier result and add ->name(...). [GET]\"],\"routes\":[]}"
+            },
+            "errors": []
+        },
+        {
+            "name": "duplicate-name-across-tiers-with-alias",
+            "input": {
+                "name": "duplicate-name-across-tiers-with-alias",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    },
+                    "manage": {
+                        "match": {
+                            "prefix": [
+                                "manage"
+                            ]
+                        }
+                    }
+                },
+                "strict": false,
+                "classifier": null,
+                "aliases": {
+                    "legacy.thing": "dup.thing"
+                },
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": "dup.thing",
+                        "uri": "admin/dup",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "dup.thing",
+                        "uri": "manage/dup",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "outputs": {
+                "analyzeRoutesSameAsAnalyze": true,
+                "rows": "[{\"name\":\"dup.thing\",\"level\":\"admin\",\"uri\":\"admin/dup\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"admin\",\"alias_of\":null},{\"name\":\"dup.thing\",\"level\":\"manage\",\"uri\":\"manage/dup\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"manage\",\"alias_of\":null},{\"name\":\"legacy.thing\",\"level\":\"admin\",\"uri\":\"admin/dup\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"admin\",\"alias_of\":\"dup.thing\"},{\"name\":\"legacy.thing\",\"level\":\"manage\",\"uri\":\"manage/dup\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"manage\",\"alias_of\":\"dup.thing\"}]",
+                "tier_counts": "{\"admin\":1,\"manage\":2}",
+                "warnings": "[\"Route name [dup.thing] is registered 2 times across tiers (admin, manage); url() resolves to the last registration, while aliases pointing to it appear in every tier it resolves to.\"]",
+                "aliases": "{\"legacy.thing\":\"dup.thing\"}",
+                "collisions": "{}",
+                "unnamed": "[]",
+                "violations": "{\"missing_name\":[],\"unassigned\":[],\"unresolved\":[]}",
+                "violationCount": "0",
+                "unnamedWarnings": "[]",
+                "formatUnnamed#0:all": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#1:admin": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#2:manage": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#3:unassigned": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#4:unresolved": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#5:不存在的层级": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "listPayload#0": "{\"levels\":[\"admin\",\"manage\",\"unassigned\"],\"filter\":null,\"count\":4,\"tier_counts\":{\"admin\":1,\"manage\":2,\"unassigned\":0},\"warnings\":[\"Route name [dup.thing] is registered 2 times across tiers (admin, manage); url() resolves to the last registration, while aliases pointing to it appear in every tier it resolves to.\"],\"routes\":[{\"name\":\"dup.thing\",\"level\":\"admin\",\"methods\":[\"GET\"],\"uri\":\"admin/dup\",\"alias_of\":null},{\"name\":\"dup.thing\",\"level\":\"manage\",\"methods\":[\"GET\"],\"uri\":\"manage/dup\",\"alias_of\":null},{\"name\":\"legacy.thing\",\"level\":\"admin\",\"methods\":[\"GET\"],\"uri\":\"admin/dup\",\"alias_of\":\"dup.thing\"},{\"name\":\"legacy.thing\",\"level\":\"manage\",\"methods\":[\"GET\"],\"uri\":\"manage/dup\",\"alias_of\":\"dup.thing\"}]}",
+                "listPayload#1": "{\"levels\":[\"admin\",\"manage\",\"unassigned\"],\"filter\":{\"level\":\"admin\"},\"count\":2,\"tier_counts\":{\"admin\":1,\"manage\":2,\"unassigned\":0},\"warnings\":[\"Route name [dup.thing] is registered 2 times across tiers (admin, manage); url() resolves to the last registration, while aliases pointing to it appear in every tier it resolves to.\"],\"routes\":[{\"name\":\"dup.thing\",\"level\":\"admin\",\"methods\":[\"GET\"],\"uri\":\"admin/dup\",\"alias_of\":null},{\"name\":\"legacy.thing\",\"level\":\"admin\",\"methods\":[\"GET\"],\"uri\":\"admin/dup\",\"alias_of\":\"dup.thing\"}]}",
+                "listPayload#2": "{\"levels\":[\"admin\",\"manage\",\"unassigned\"],\"filter\":{\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":1,\"manage\":2,\"unassigned\":0},\"warnings\":[\"Route name [dup.thing] is registered 2 times across tiers (admin, manage); url() resolves to the last registration, while aliases pointing to it appear in every tier it resolves to.\"],\"routes\":[]}",
+                "listPayload#3": "{\"levels\":[\"admin\",\"manage\",\"unassigned\"],\"filter\":{\"aliases\":true},\"count\":2,\"tier_counts\":{\"admin\":1,\"manage\":2,\"unassigned\":0},\"warnings\":[\"Route name [dup.thing] is registered 2 times across tiers (admin, manage); url() resolves to the last registration, while aliases pointing to it appear in every tier it resolves to.\"],\"routes\":[{\"name\":\"legacy.thing\",\"level\":\"admin\",\"methods\":[\"GET\"],\"uri\":\"admin/dup\",\"alias_of\":\"dup.thing\"},{\"name\":\"legacy.thing\",\"level\":\"manage\",\"methods\":[\"GET\"],\"uri\":\"manage/dup\",\"alias_of\":\"dup.thing\"}]}",
+                "listPayload#4": "{\"levels\":[\"admin\",\"manage\",\"unassigned\"],\"filter\":{\"level\":\"unassigned\",\"unassigned\":true},\"count\":0,\"tier_counts\":{\"admin\":1,\"manage\":2,\"unassigned\":0},\"warnings\":[\"Route name [dup.thing] is registered 2 times across tiers (admin, manage); url() resolves to the last registration, while aliases pointing to it appear in every tier it resolves to.\"],\"routes\":[]}"
+            },
+            "errors": []
+        },
+        {
+            "name": "alias-warnings",
+            "input": {
+                "name": "alias-warnings",
+                "levels": {
+                    "client": {
+                        "match": {
+                            "prefix": [
+                                "client"
+                            ]
+                        }
+                    }
+                },
+                "strict": false,
+                "classifier": null,
+                "aliases": {
+                    "client.dup": "client.x",
+                    "ghost.alias": "client.x"
+                },
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": "client.x",
+                        "uri": "client/x",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "client.dup"
+                        ]
+                    },
+                    {
+                        "name": "client.dup",
+                        "uri": "client/dup",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "client.y",
+                        "uri": "client/y",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "client.dup"
+                        ]
+                    },
+                    {
+                        "name": null,
+                        "uri": "client/unnamed",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": [
+                            "orphan.alias"
+                        ]
+                    }
+                ]
+            },
+            "outputs": {
+                "analyzeRoutesSameAsAnalyze": true,
+                "rows": "[{\"name\":\"client.x\",\"level\":\"client\",\"uri\":\"client/x\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"client\",\"alias_of\":null},{\"name\":\"client.dup\",\"level\":\"client\",\"uri\":\"client/dup\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"client\",\"alias_of\":null},{\"name\":\"client.y\",\"level\":\"client\",\"uri\":\"client/y\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"client\",\"alias_of\":null},{\"name\":\"ghost.alias\",\"level\":\"client\",\"uri\":\"client/x\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"client\",\"alias_of\":\"client.x\"}]",
+                "tier_counts": "{\"client\":4}",
+                "warnings": "[\"Alias [orphan.alias] is declared via ->forgeAlias() on an unnamed route (client/unnamed); the declaration is ignored because the route has no name. Add ->name(...) to the route or move the alias to a named route.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET]\"]",
+                "aliases": "{\"ghost.alias\":\"client.x\"}",
+                "collisions": "{\"client.dup\":\"client.x\"}",
+                "unnamed": "[{\"uri\":\"client/unnamed\",\"methods\":[\"GET\"],\"middleware\":[],\"level\":\"client\",\"source\":\"match\",\"tier\":null,\"requested\":null,\"error\":null}]",
+                "violations": "{\"missing_name\":[],\"unassigned\":[],\"unresolved\":[]}",
+                "violationCount": "0",
+                "unnamedWarnings": "[\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET]\"]",
+                "formatUnnamed#0:all": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [client]:\",\"  - Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET]\"]",
+                "formatUnnamed#1:client": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [client]:\",\"  - Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET]\"]",
+                "formatUnnamed#2:unassigned": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#3:unresolved": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#4:不存在的层级": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "listPayload#0": "{\"levels\":[\"client\",\"unassigned\"],\"filter\":null,\"count\":4,\"tier_counts\":{\"client\":4,\"unassigned\":0},\"warnings\":[\"Alias [orphan.alias] is declared via ->forgeAlias() on an unnamed route (client/unnamed); the declaration is ignored because the route has no name. Add ->name(...) to the route or move the alias to a named route.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET]\"],\"routes\":[{\"name\":\"client.x\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/x\",\"alias_of\":null},{\"name\":\"client.dup\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/dup\",\"alias_of\":null},{\"name\":\"client.y\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/y\",\"alias_of\":null},{\"name\":\"ghost.alias\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/x\",\"alias_of\":\"client.x\"}]}",
+                "listPayload#1": "{\"levels\":[\"client\",\"unassigned\"],\"filter\":{\"level\":\"client\"},\"count\":4,\"tier_counts\":{\"client\":4,\"unassigned\":0},\"warnings\":[\"Alias [orphan.alias] is declared via ->forgeAlias() on an unnamed route (client/unnamed); the declaration is ignored because the route has no name. Add ->name(...) to the route or move the alias to a named route.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET]\"],\"routes\":[{\"name\":\"client.x\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/x\",\"alias_of\":null},{\"name\":\"client.dup\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/dup\",\"alias_of\":null},{\"name\":\"client.y\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/y\",\"alias_of\":null},{\"name\":\"ghost.alias\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/x\",\"alias_of\":\"client.x\"}]}",
+                "listPayload#2": "{\"levels\":[\"client\",\"unassigned\"],\"filter\":{\"unassigned\":true},\"count\":0,\"tier_counts\":{\"client\":4,\"unassigned\":0},\"warnings\":[\"Alias [orphan.alias] is declared via ->forgeAlias() on an unnamed route (client/unnamed); the declaration is ignored because the route has no name. Add ->name(...) to the route or move the alias to a named route.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET]\"],\"routes\":[]}",
+                "listPayload#3": "{\"levels\":[\"client\",\"unassigned\"],\"filter\":{\"aliases\":true},\"count\":1,\"tier_counts\":{\"client\":4,\"unassigned\":0},\"warnings\":[\"Alias [orphan.alias] is declared via ->forgeAlias() on an unnamed route (client/unnamed); the declaration is ignored because the route has no name. Add ->name(...) to the route or move the alias to a named route.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET]\"],\"routes\":[{\"name\":\"ghost.alias\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/x\",\"alias_of\":\"client.x\"}]}",
+                "listPayload#4": "{\"levels\":[\"client\",\"unassigned\"],\"filter\":{\"level\":\"unassigned\",\"unassigned\":true},\"count\":0,\"tier_counts\":{\"client\":4,\"unassigned\":0},\"warnings\":[\"Alias [orphan.alias] is declared via ->forgeAlias() on an unnamed route (client/unnamed); the declaration is ignored because the route has no name. Add ->name(...) to the route or move the alias to a named route.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Alias [client.dup] collides with a real route name; the real route wins and the alias is ignored.\",\"Route (client/unnamed) is assigned to level [client] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [client]'s match rule. [GET]\"],\"routes\":[]}"
+            },
+            "errors": []
+        },
+        {
+            "name": "exclusions",
+            "input": {
+                "name": "exclusions",
+                "levels": {
+                    "manage": {
+                        "match": {
+                            "middleware": [
+                                "manage"
+                            ]
+                        }
+                    }
+                },
+                "strict": false,
+                "classifier": null,
+                "aliases": {},
+                "uriPrefixes": [
+                    "/_forge/routes"
+                ],
+                "infos": [
+                    {
+                        "name": "forge.routes.manage",
+                        "uri": "whatever/a",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "forge.manager.api.routes",
+                        "uri": "whatever/b",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": null,
+                        "uri": "_forge/routes/manage",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "manage"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "manage.reports",
+                        "uri": "manage/reports",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "manage"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "outputs": {
+                "analyzeRoutesSameAsAnalyze": true,
+                "rows": "[{\"name\":\"manage.reports\",\"level\":\"manage\",\"uri\":\"manage/reports\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[\"manage\"],\"tier\":\"manage\",\"alias_of\":null}]",
+                "tier_counts": "{\"manage\":1}",
+                "warnings": "[]",
+                "aliases": "{}",
+                "collisions": "{}",
+                "unnamed": "[]",
+                "violations": "{\"missing_name\":[],\"unassigned\":[],\"unresolved\":[]}",
+                "violationCount": "0",
+                "unnamedWarnings": "[]",
+                "formatUnnamed#0:all": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#1:manage": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#2:unassigned": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#3:unresolved": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#4:不存在的层级": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "listPayload#0": "{\"levels\":[\"manage\",\"unassigned\"],\"filter\":null,\"count\":1,\"tier_counts\":{\"manage\":1,\"unassigned\":0},\"warnings\":[],\"routes\":[{\"name\":\"manage.reports\",\"level\":\"manage\",\"methods\":[\"GET\"],\"uri\":\"manage/reports\",\"alias_of\":null}]}",
+                "listPayload#1": "{\"levels\":[\"manage\",\"unassigned\"],\"filter\":{\"level\":\"manage\"},\"count\":1,\"tier_counts\":{\"manage\":1,\"unassigned\":0},\"warnings\":[],\"routes\":[{\"name\":\"manage.reports\",\"level\":\"manage\",\"methods\":[\"GET\"],\"uri\":\"manage/reports\",\"alias_of\":null}]}",
+                "listPayload#2": "{\"levels\":[\"manage\",\"unassigned\"],\"filter\":{\"unassigned\":true},\"count\":0,\"tier_counts\":{\"manage\":1,\"unassigned\":0},\"warnings\":[],\"routes\":[]}",
+                "listPayload#3": "{\"levels\":[\"manage\",\"unassigned\"],\"filter\":{\"aliases\":true},\"count\":0,\"tier_counts\":{\"manage\":1,\"unassigned\":0},\"warnings\":[],\"routes\":[]}",
+                "listPayload#4": "{\"levels\":[\"manage\",\"unassigned\"],\"filter\":{\"level\":\"unassigned\",\"unassigned\":true},\"count\":0,\"tier_counts\":{\"manage\":1,\"unassigned\":0},\"warnings\":[],\"routes\":[]}"
+            },
+            "errors": []
+        },
+        {
+            "name": "strict-mode-keeps-table-readable",
+            "input": {
+                "name": "strict-mode-keeps-table-readable",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "strict": true,
+                "classifier": null,
+                "aliases": {},
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "loose.route",
+                        "uri": "loose/route",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": null,
+                        "uri": "admin/unnamed",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "outputs": {
+                "analyzeRoutesSameAsAnalyze": true,
+                "rows": "[{\"name\":\"admin.users\",\"level\":\"admin\",\"uri\":\"admin/users\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"admin\",\"alias_of\":null},{\"name\":\"loose.route\",\"level\":\"unassigned\",\"uri\":\"loose/route\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":null,\"alias_of\":null}]",
+                "tier_counts": "{\"admin\":1,\"unassigned\":1}",
+                "warnings": "[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\"]",
+                "aliases": "{}",
+                "collisions": "{}",
+                "unnamed": "[{\"uri\":\"admin/unnamed\",\"methods\":[\"GET\"],\"middleware\":[],\"level\":\"admin\",\"source\":\"match\",\"tier\":null,\"requested\":null,\"error\":null}]",
+                "violations": "{\"missing_name\":[{\"uri\":\"admin/unnamed\",\"methods\":[\"GET\",\"HEAD\"],\"level\":\"admin\",\"source\":\"match\"}],\"unassigned\":[{\"name\":\"loose.route\",\"uri\":\"loose/route\",\"methods\":[\"GET\",\"HEAD\"],\"middleware\":[]}],\"unresolved\":[]}",
+                "violationCount": "2",
+                "unnamedWarnings": "[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\"]",
+                "formatUnnamed#0:all": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [admin]:\",\"  - Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\"]",
+                "formatUnnamed#1:admin": "[\"1 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\",\"1 unnamed route(s) in group [admin]:\",\"  - Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\"]",
+                "formatUnnamed#2:unassigned": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#3:unresolved": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "formatUnnamed#4:不存在的层级": "[\"0 unnamed route(s) total — they cannot be referenced by url() and appear in no forge endpoint, type map or route list.\"]",
+                "listPayload#0": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":null,\"count\":2,\"tier_counts\":{\"admin\":1,\"unassigned\":1},\"warnings\":[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\"],\"routes\":[{\"name\":\"admin.users\",\"level\":\"admin\",\"methods\":[\"GET\"],\"uri\":\"admin/users\",\"alias_of\":null},{\"name\":\"loose.route\",\"level\":\"unassigned\",\"methods\":[\"GET\"],\"uri\":\"loose/route\",\"alias_of\":null}]}",
+                "listPayload#1": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"level\":\"admin\"},\"count\":1,\"tier_counts\":{\"admin\":1,\"unassigned\":1},\"warnings\":[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\"],\"routes\":[{\"name\":\"admin.users\",\"level\":\"admin\",\"methods\":[\"GET\"],\"uri\":\"admin/users\",\"alias_of\":null}]}",
+                "listPayload#2": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"unassigned\":true},\"count\":1,\"tier_counts\":{\"admin\":1,\"unassigned\":1},\"warnings\":[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\"],\"routes\":[{\"name\":\"loose.route\",\"level\":\"unassigned\",\"methods\":[\"GET\"],\"uri\":\"loose/route\",\"alias_of\":null}]}",
+                "listPayload#3": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"aliases\":true},\"count\":0,\"tier_counts\":{\"admin\":1,\"unassigned\":1},\"warnings\":[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\"],\"routes\":[]}",
+                "listPayload#4": "{\"levels\":[\"admin\",\"unassigned\"],\"filter\":{\"level\":\"unassigned\",\"unassigned\":true},\"count\":1,\"tier_counts\":{\"admin\":1,\"unassigned\":1},\"warnings\":[\"Route (admin/unnamed) is assigned to level [admin] by a config match rule but has no route name assigned; it will not appear in any forge endpoint or command output. Add ->name(...) to the route or narrow level [admin]'s match rule. [GET]\"],\"routes\":[{\"name\":\"loose.route\",\"level\":\"unassigned\",\"methods\":[\"GET\"],\"uri\":\"loose/route\",\"alias_of\":null}]}"
+            },
+            "errors": []
+        },
+        {
+            "name": "parameters-and-defaults",
+            "input": {
+                "name": "parameters-and-defaults",
+                "levels": {
+                    "client": {
+                        "match": {
+                            "prefix": [
+                                "client"
+                            ]
+                        }
+                    }
+                },
+                "strict": false,
+                "classifier": null,
+                "aliases": {},
+                "uriPrefixes": [],
+                "infos": [
+                    {
+                        "name": "client.show",
+                        "uri": "client/{id}",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [
+                            "id"
+                        ],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "client.list",
+                        "uri": "client/posts/{page?}",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [
+                            "page"
+                        ],
+                        "parameterDefaults": {
+                            "page": "1"
+                        },
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "client.empty",
+                        "uri": "client/empty",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "outputs": {
+                "analyzeRoutesSameAsAnalyze": true,
+                "rows": "[{\"name\":\"client.show\",\"level\":\"client\",\"uri\":\"client/{id}\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[\"id\"],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"client\",\"alias_of\":null},{\"name\":\"client.list\",\"level\":\"client\",\"uri\":\"client/posts/{page?}\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[\"page\"],\"parameter_defaults\":{\"page\":\"1\"},\"middleware\":[],\"tier\":\"client\",\"alias_of\":null},{\"name\":\"client.empty\",\"level\":\"client\",\"uri\":\"client/empty\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"client\",\"alias_of\":null}]",
+                "tier_counts": "{\"client\":3}",
+                "warnings": "[]",
+                "aliases": "{}",
+                "collisions": "{}",
+                "unnamed": "[]",
+                "violations": "{\"missing_name\":[],\"unassigned\":[],\"unresolved\":[]}",
+                "violationCount": "0",
+                "unnamedWarnings": "[]",
+                "formatUnnamed#0:all": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#1:client": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#2:unassigned": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#3:unresolved": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "formatUnnamed#4:不存在的层级": "[\"No unnamed routes: every route in the table has a name.\"]",
+                "listPayload#0": "{\"levels\":[\"client\",\"unassigned\"],\"filter\":null,\"count\":3,\"tier_counts\":{\"client\":3,\"unassigned\":0},\"warnings\":[],\"routes\":[{\"name\":\"client.show\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/{id}\",\"alias_of\":null},{\"name\":\"client.list\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/posts/{page?}\",\"alias_of\":null},{\"name\":\"client.empty\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/empty\",\"alias_of\":null}]}",
+                "listPayload#1": "{\"levels\":[\"client\",\"unassigned\"],\"filter\":{\"level\":\"client\"},\"count\":3,\"tier_counts\":{\"client\":3,\"unassigned\":0},\"warnings\":[],\"routes\":[{\"name\":\"client.show\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/{id}\",\"alias_of\":null},{\"name\":\"client.list\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/posts/{page?}\",\"alias_of\":null},{\"name\":\"client.empty\",\"level\":\"client\",\"methods\":[\"GET\"],\"uri\":\"client/empty\",\"alias_of\":null}]}",
+                "listPayload#2": "{\"levels\":[\"client\",\"unassigned\"],\"filter\":{\"unassigned\":true},\"count\":0,\"tier_counts\":{\"client\":3,\"unassigned\":0},\"warnings\":[],\"routes\":[]}",
+                "listPayload#3": "{\"levels\":[\"client\",\"unassigned\"],\"filter\":{\"aliases\":true},\"count\":0,\"tier_counts\":{\"client\":3,\"unassigned\":0},\"warnings\":[],\"routes\":[]}",
+                "listPayload#4": "{\"levels\":[\"client\",\"unassigned\"],\"filter\":{\"level\":\"unassigned\",\"unassigned\":true},\"count\":0,\"tier_counts\":{\"client\":3,\"unassigned\":0},\"warnings\":[],\"routes\":[]}"
+            },
+            "errors": []
+        }
+    ]
+}

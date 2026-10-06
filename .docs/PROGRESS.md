@@ -34,7 +34,7 @@
 - ✅ **P1c 缓存** `b867b04`：`CacheStore` + `RouteCache`（TTL 三态 / keys 索引 / debug 旁路 / `forgetLevel` 连带 summary）
 - ✅ **P1d 别名 + 严格扫描** `f1346bb`：`AliasResolver`、`StrictViolationScanner`、`RF_BE_009`，27 例跨语言对等
 - ✅ **P1e-1 仓库层** `RouteRepository` + `RouteSource` + `RepositoryConfig`，21 例 JSON 文本级对等（含缓存调用序列）
-- ⏳ **P1e-2** `RouteAnalyzer`（PHP 侧 540 行：warnings 全口径、`--unnamed` 数据、rows/tier_counts/list --json 结构）
+- ✅ **P1e-2 分析器** `RouteAnalyzer` + `Row` + `Analysis`：11 例对等（rows/tier_counts/warnings/unnamed/violations/--unnamed 五种过滤/list --json 五种过滤），并做三次变异检验（别名不铺开、未命名告警不入 warnings、文案改一词）分别被 5/10/6 例抓住
 - ⏳ **P1f** `TypeGenerator`（d.ts 逐行）+ `SummaryRenderer`
 - ⏳ **P2** 注解与路由扫描、URI 归一化、两端点、异常 advice
 - ⏳ **P3** `@ForgeTier` 类/包继承接线、classifier bean、双通道冲突 fail-fast、strict 聚合上 HTTP
@@ -67,6 +67,12 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
 8. 管理器条目的 `parameter_defaults` 在 PHP 里是裸数组（空→`[]`），与层级端点的 `(object)`（空→`{}`）不同；
    Java 侧刻意保留这个差异以做到字节一致，别当 bug「顺手修正」。
 
+9. **`Map.copyOf` 不保证迭代顺序**：`tier_counts`、别名表这类「键序即契约」的产物一旦被它接管，
+   顺序就变成哈希顺序——分析器的对等测试正是这样抓到 `{"admin":1,...}` 变成 `{"unassigned":1,...}`。
+   一律用 `Collections.unmodifiableMap(new LinkedHashMap<>(..))`。
+10. **Gradle 测试结果可能是陈旧的**：改完生产代码后 `grep FAILED` 抓到 0 不代表真跑过（UP-TO-DATE）。
+    复验一律带 `--rerun-tasks`，本项目已形成习惯。
+
 ## 对等测试的有效性要做变异检验
 
 「全绿」不等于「测到了」。P1e-1 用三个变异验证断言真会咬：注入「别名不写入产物」→ 4 例失败；
@@ -76,7 +82,7 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
 
 ## 待办与后续需要拍板的点
 
-当前无阻塞项。下一步是 P1e（`RouteAnalyzer` + `RouteRepository`，PHP 侧 540 + 475 行）。
+当前无阻塞项。下一步是 P1f（`TypeGenerator` d.ts 逐行 + `SummaryRenderer`），随后进入 P2 的 Spring 侧注解与扫描。
 
 进入 P5 前有两处需要先定，届时会带上下文再问：
 
@@ -90,7 +96,7 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
 ```bash
 cd G:/Java/route-forge-springboot
 export GRADLE_USER_HOME="$PWD/.gradle"   # cmd 下：set GRADLE_USER_HOME=G:\Java\route-forge-springboot\.gradle
-./gradlew.bat build                      # 全量门禁
+./gradlew.bat build --rerun-tasks          # 全量门禁（复验一律带 --rerun-tasks）
 ./gradlew.bat :forge-core:test           # 单模块
 ./gradlew.bat clean build --offline      # 本地缓存自足性检查（加新依赖后必查）
 ```
