@@ -187,10 +187,11 @@ class SpringRoutingModelSpikeTest {
     }
 
     @Test
-    @DisplayName("未标注 name 的映射 getName() 为空串或 null：命名通道的缺省形态")
+    @DisplayName("未标注 name 的映射 getName() 给 null：命名通道判缺省以 null 为准")
     void unnamedMappingHasNoName() {
         RequestMappingInfo info = infoOf("bare");
 
-        assertThat(info.getName()).isIn(java.util.Arrays.asList(null, ""));
+        // 实测给 null（一度按「空串」写过断言，被副注解测试反证）：判缺省只需认 null
+        assertThat(info.getName()).isNull();
     }
 }

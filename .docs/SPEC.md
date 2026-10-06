@@ -89,10 +89,14 @@ Framework 7 实测事实（由 `SpringRoutingModelSpikeTest` 7 例钉成回归�
 
 - `RequestMappingInfo#getName()` 公开可读，值即 `@RequestMapping(name=...)` 及其派生注解上的 name——
   所以「复用 Spring 原生 name 属性」这条路成立，不必借道 OpenAPI 的 operationId；
-- meta-annotated `@RequestMapping` 的**组合注解**能正常注册映射，`@AliasFor` 透传 `path`/`method`/`name` 均生效；
-- 未标注 name 时 `getName()` 给**空串**（不是 null），判缺省两种都要认；
+  未标注时给 **null**（不是空串），判缺省按 null 认；
+- meta-annotated `@RequestMapping` 的**组合注解**能正常注册映射，`@AliasFor` 透传 `name / value / path /
+  method / params / headers / consumes / produces / version` 全部生效（FW7 `@RequestMapping` 是这 9 个属性）；
+- `version` 条件在**未配置 `ApiVersionStrategy` 的映射上会直接注册失败**
+  （`API version specified, but no ApiVersionStrategy configured`）：本包照常透传它，
+  但用不用由宿主自己配策略，forge 不代配；
 - Spring 模板语法**拒绝** `{name?}`（`PatternParseException: Char '?' is not allowed in a captured variable name`），
-  因此 Laravel 风格的可选标记只能由 forge 注解的独立属性承载，适配层再拼进产物 URI；
+  因此 Laravel 风格的可选标记只能由 `@ForgeRoute(optional=...)` 承载，适配层再拼进产物 URI；
 - `PathPattern` 不再公开 `getVariableNames()`（只剩 `getPatternString()`），参数名一律由核心层自解析模板取得;
 - GET 映射**不**自动携带 HEAD（Laravel 会）：为守住「GET 的 methods 含 GET、HEAD」的跨语言契约，
   归一化时由适配层为 GET 补 `HEAD`，这是刻意补齐而非框架行为。
