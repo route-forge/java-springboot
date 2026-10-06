@@ -85,13 +85,26 @@ Java 侧落地口径：
 
 ### 4.1 路由名（Spring 无命名路由） ⟨P2⟩
 
-三通道，优先级显式 > 派生：
+Framework 7 实测事实（由 `SpringRoutingModelSpikeTest` 7 例钉成回归，SDK 升级若改动会当场失败）：
+
+- `RequestMappingInfo#getName()` 公开可读，值即 `@RequestMapping(name=...)` 及其派生注解上的 name——
+  所以「复用 Spring 原生 name 属性」这条路成立，不必借道 OpenAPI 的 operationId；
+- meta-annotated `@RequestMapping` 的**组合注解**能正常注册映射，`@AliasFor` 透传 `path`/`method`/`name` 均生效；
+- 未标注 name 时 `getName()` 给**空串**（不是 null），判缺省两种都要认；
+- Spring 模板语法**拒绝** `{name?}`（`PatternParseException: Char '?' is not allowed in a captured variable name`），
+  因此 Laravel 风格的可选标记只能由 forge 注解的独立属性承载，适配层再拼进产物 URI；
+- `PathPattern` 不再公开 `getVariableNames()`（只剩 `getPatternString()`），参数名一律由核心层自解析模板取得;
+- GET 映射**不**自动携带 HEAD（Laravel 会）：为守住「GET 的 methods 含 GET、HEAD」的跨语言契约，
+  归一化时由适配层为 GET 补 `HEAD`，这是刻意补齐而非框架行为。
+
+命名三通道，优先级显式 > 派生：
 
 1. `@ForgeRoute(name = "admin.users.show", ...)` —— 组合注解，meta-annotated `@RequestMapping`，
    `@AliasFor` 全量透传原生条件属性。
 2. `@Forge(name = "admin.users.show")` —— 副注解，叠加在 `@GetMapping` 等原生 mapping 上（复杂条件逃生舱）。
 3. `RouteNamingStrategy` bean —— 按 handler 类/方法派生，默认关闭。
 
+宿主直接在 `@RequestMapping(name=...)` 上给的名字也认（等价第 1 通道的原生形态，不强制要求 forge 注解）。
 三通道同时命中同一 handler 方法且给出不同事实 → 启动期 fail-fast（`RF_BE_010`），不静默择一。
 
 ### 4.2 层级（tier）
@@ -101,6 +114,8 @@ Java 侧落地口径：
 
 ### 4.3 URI 与参数归一化 ⟨P2⟩
 
+- 参数名由核心层自写的模板解析器从 URI 取得（Framework 7 的 `PathPattern` 不给变量名），
+  解析器要能正确处理嵌套花括号（`{id:\d{4}}` 这类正则里带 `{4}`）；
 - 剥离 `{name:regex}` 约束、`{*name}`/`{version}` 等模板变量原样输出但不进 `parameters`（Spring 特有的
   `**` 通配段保留字面，SPEC 注明前端不可参数化）。
 - 可选路径参数：`@ForgeRoute(optional = {"page"}, defaults = {"page=1"})` → 输出 `xxx/{page?}` +
