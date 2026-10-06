@@ -35,7 +35,20 @@
 - ✅ **P1d 别名 + 严格扫描** `f1346bb`：`AliasResolver`、`StrictViolationScanner`、`RF_BE_009`，27 例跨语言对等
 - ✅ **P1e-1 仓库层** `RouteRepository` + `RouteSource` + `RepositoryConfig`，21 例 JSON 文本级对等（含缓存调用序列）
 - ✅ **P1e-2 分析器** `RouteAnalyzer` + `Row` + `Analysis`：11 例对等（rows/tier_counts/warnings/unnamed/violations/--unnamed 五种过滤/list --json 五种过滤），并做三次变异检验（别名不铺开、未命名告警不入 warnings、文案改一词）分别被 5/10/6 例抓住
-- ⏳ **P1f** `TypeGenerator`（d.ts 逐行）+ `SummaryRenderer`
+- ✅ **P1f** `JsonWriter`（与 PHP `json_encode` 同形态）+ `TypeGenerator`（d.ts 整文 + `--json`）+
+  `SummaryRenderer`（内嵌 `<script>`）：5 例类型产物 + 3 例 HTML + 3 种 JSON 形态，全部整文比对
+
+> **P1 核心层到此收口**：forge-core 169 个测试全绿，其中 119 例直接对着 php-common@f3fa70d 的真实产物断言。
+
+## 本阶段新发现的形态细节（照抄，不「顺手修正」）
+
+- **`--json` 顶层在目标层级为 0 时 PHP 输出 `[]`**：顶层没做 `(object)` 强转，只有每个层级块做了。
+  Java 照抄并在 SPEC 注明，脚本侧要能容忍顶层两种形态。
+- **d.ts 文件头时间来自 `date('Y-m-d\TH:i:s.000\Z')`**：毫秒位恒为字面量 `.000`、`Z` 也是字面量、
+  时区取进程默认（非 UTC 机器会写出「本地时间 + Z」）。Java 照抄该形态，同时把时间做成可注入入参以便测试。
+- **emoji 的代理对不能直接喂 `%x`**：`String.format("%04x", Character)` 抛 IllegalFormatConversionException，
+  必须显式转 int——这条是被对等测试当场抓到的，纯 Java 单测写不出来。
+
 - ⏳ **P2** 注解与路由扫描、URI 归一化、两端点、异常 advice
 - ⏳ **P3** `@ForgeTier` 类/包继承接线、classifier bean、双通道冲突 fail-fast、strict 聚合上 HTTP
 - ⏳ **P4** CLI 三命令；**P5** Security 守卫 / 管理器 / `forge-levels.yml` 写回 / 内嵌摘要；**P6** 示例 + 双前端 + Laravel 端 golden + 发布

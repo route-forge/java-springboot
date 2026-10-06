@@ -75,6 +75,11 @@ public final class PhpFixtures {
     }
 
     public static LevelsConfig toLevels(JsonNode node) {
+        // PHP 的空关联数组 json_encode 出 []，读回来是 Array 节点：按「无层级」处理，
+        // 不能直接 convertValue 成 Map（那会抛 MismatchedInputException）
+        if (node == null || node.isNull() || node.isArray()) {
+            return LevelsConfig.empty();
+        }
         return new LevelsConfig(MAPPER.convertValue(node, new TypeReference<LinkedHashMap<String, Object>>() {
         }));
     }

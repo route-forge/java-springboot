@@ -157,6 +157,10 @@ Java 侧落地口径：
 `ForgeRoutes` 别名与四个工具类型。`method` 取首个非 HEAD 方法；`params` 类型恒 `string | number`；
 `body` 仅 POST/PUT/PATCH 出现；`response` 恒 `unknown`；空层级输出 `key: { }`。
 
+两处照抄上游的偶然形态（改了就会与 Laravel 后端产物不一致，注明而非隐藏）：文件头「生成时间」来自
+`date('Y-m-d\TH:i:s.000\Z')`——毫秒位恒为字面量 `.000`、`Z` 为字面量、时区取进程默认；
+`--json` 在**目标层级为 0** 时顶层输出 `[]`（只有层级块做了对象强转），消费侧要能容忍 `[]` 与 `{}`。
+
 ### 5.3 管理器页面 ⟨P5⟩
 
 `GET /_forge/manager`（HTML，零构建依赖静态页）+ `GET /_forge/manager/api/routes` +
