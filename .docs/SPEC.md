@@ -55,6 +55,15 @@ Java 侧落地口径：
   含冒号的占位符无法被替换，会原样残留在 URL 里。
 - 可选段输出 Laravel 风格 `{page?}`，来源见 §4.3。
 
+## 2.3 Java 侧与 Laravel 的形态差异（功能等价，形态从 Spring）
+
+字段集与语义与 Laravel 适配包一一对应，只有下列形态点按 Spring Boot 的习惯走，不为了逐字节相同而改造 Spring：
+
+| 项 | Laravel 侧 | 本包（Spring 侧） | 理由 |
+|---|---|---|---|
+| 路由 `uri` 前导斜杠 | 不带（`admin/users/{user}`） | 保留（`/admin/users/{user}`） | Spring 的 mapping 天然带 `/`，去掉是为了模仿参照实现，不是契约要求；前端两种都吃 |
+| `schemeVersion` / 键名 / 空层级 `{}` / 剥正则 | —— | 完全一致 | 这些是前端消费契约，必须一致 |
+
 ## 3. 配置项（`forge.*`）
 
 前缀 `forge`，键名与 `config/forge.php` 保持 snake→kebab 的机械对应，便于跨语言迁移配置。
@@ -98,8 +107,15 @@ Framework 7 实测事实（由 `SpringRoutingModelSpikeTest` 7 例钉成回归�
 - Spring 模板语法**拒绝** `{name?}`（`PatternParseException: Char '?' is not allowed in a captured variable name`），
   因此 Laravel 风格的可选标记只能由 `@ForgeRoute(optional=...)` 承载，适配层再拼进产物 URI；
 - `PathPattern` 不再公开 `getVariableNames()`（只剩 `getPatternString()`），参数名一律由核心层自解析模板取得;
-- GET 映射**不**自动携带 HEAD（Laravel 会）：为守住「GET 的 methods 含 GET、HEAD」的跨语言契约，
-  归一化时由适配层为 GET 补 `HEAD`，这是刻意补齐而非框架行为。
+- GET 映射的**声明条件**只含 GET，但运行期 HEAD 请求实测能打通（Servlet 语义：`doHead` 走 `doGet` 并抑制响应体）。
+  因此下发 `methods` 时给 GET 附上 `HEAD` 是**如实描述 Spring 的能力**，不是模仿 Laravel 的形态；
+- 无 path 条件的映射（只按 `params`/`headers` 匹配）实测**只匹配根路径**：Spring 会把它 materialize 成
+  `["", "/"]` 两个 pattern。二者是同一个地址，扫描时归一为一个 `/` 并去重——不去重就会产出两条记录，
+  其中一条 URI 是空串；
+- 一个映射带多个路径（`path = {"/a","/b"}`）展开成**多条**路由记录，与 Laravel「一条 URI 一条路由」的形态对齐；
+- 未声明 method 的映射（`@RequestMapping("/x")`）实测任何方法都能匹配。forge 侧对这种路由下发完整标准方法集
+  （GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS/TRACE），不写空数组——空数组会让前端 `pickMethod` 拿不到方法而报错，
+  也与「不限方法」的真实语义相反。
 
 命名三通道，优先级显式 > 派生：
 
@@ -122,10 +138,8 @@ Framework 7 实测事实（由 `SpringRoutingModelSpikeTest` 7 例钉成回归�
 正则约束（约束走 `->where()`）、也没有 `{*path}` 捕获段，因此这里没有可参照的产物，只按前端消费契约自证
 （前端占位符正则 `/\{([^{}]+)\}/g`：凡它替换不了的形态都不许下发）。
 
-- **前导斜杠**：Spring 的 mapping 一律以 `/` 开头，而 Laravel 的 `Route::uri()` 不带前导斜杠。归一化时
-  去掉前导 `/` 与 Laravel 同形（`/admin/users/{user}` → `admin/users/{user}`），**例外**是根路径 `/`
-  保持 `/`（Laravel 的 `Route::get('/')` 的 uri 就是 `/`，去斜杠会得到空串）。摘要里层级端点的
-  `route.uri` 仍带前导斜杠——它来自 `endpoint_prefix` 的规范化，两者不是同一个值；
+- **前导斜杠按 Spring 原样保留**（Java 侧与 Laravel 的形态差异，见 §2.3）：Spring 的 mapping 一律以 `/` 开头，
+  本包不为了对齐 Laravel 的相对形态而去掉它——契约以 Spring 习惯为准，前端对两种形态都能正确拼接；
 - 参数名由本类自解析模板取得，且必须按**花括号深度**配对：`{id:\d{4}}` 里的 `{4}` 是量词，
   按「第一个右花括号」切会把名字读成 `id:\d`；
 - **反斜杠转义必须整对吞掉**：实测 Spring 接受 `{code:[a-z\}]+}`（要匹配字面 `}` 必须转义），

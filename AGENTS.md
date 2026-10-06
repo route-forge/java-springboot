@@ -38,10 +38,13 @@ export GRADLE_USER_HOME="$PWD/.gradle"        # 或每条命令前置 GRADLE_USE
 
 ## 行为一致性铁律
 
-1. 任何与 PHP 侧语义分歧的实现，必须在本仓 `.docs/SPEC.md` 显式记为「Java 专属扩展」或「差异」，不许静默分叉。
-2. 端点响应逐字段对齐：`levels`/`config` 必发、空层级必须是 `{}`、URI 模板必须剥离 `{name:regex}` 约束。
-3. 包自身路由（层级/摘要/管理器端点）必须在**所有**元信息扫描中排除（按来源 + 按规范化 `endpoint_prefix` 的段级 URI 前缀），
-   否则 `strict_mode=true` 时包会把自己报成宿主的配置错误、端点必 500。
+1. **契约以 Spring Boot 的习惯为准**，Laravel 是参照而非规范：字段集、语义、错误码与 Laravel 侧保持**功能等价**，
+   但形态上遇到冲突时按 Spring 侧走（例：路由 `uri` 保留 Spring 原样的前导 `/`，不刻意改成 Laravel 的相对形态）。
+   任何与 PHP 侧的分歧必须在本仓 `.docs/SPEC.md` 显式记为「Java 专属扩展」或「差异」，不许静默分叉。
+2. 端点响应逐字段对齐：`levels`/`config` 必发、空层级必须是 `{}`、URI 模板必须剥离 `{name:regex}` 约束
+   （前端替换不了带冒号的占位符）。
+3. 包自身路由（层级/摘要/管理器端点）必须在**所有**元信息扫描中排除（按 handler 来源 + 按规范化 `endpoint_prefix`
+   的段级 URI 前缀），否则 `strict_mode=true` 时包会把自己报成宿主的配置错误、端点必 500。
 4. 前端校验语义不变：前端始终抛错、拒绝静默忽略；`strict_mode` 是后端语义，前端无对应开关。
 
 ## Git 约定

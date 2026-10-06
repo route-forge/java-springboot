@@ -25,6 +25,9 @@
 | 文档 | 本仓自带一份 Java SPEC；跨语言端点契约以 `route-forge/php-laravel/.docs/SPEC.md` 为权威 |
 | 前端 | `@route-forge/*` 3.1.0 零改动接入（已实证：契约即插件点，vue/react 包里 0 处 PHP 痕迹） |
 | Gradle 环境 | 依赖与发行包全在项目本地 `<根>/.gradle`（gitignore），与用户目录隔离；镜像配置在 `.gradle/init.d/cn-mirrors.gradle.kts`（依赖腾讯、插件阿里、官方兜底），不入 git。`settings.gradle.kts` 只声明 mavenCentral。wrapper 的 `distributionUrl` 指腾讯——本机缓存的 9.7.0 发行包正是该 URL 的哈希，而官方 services.gradle.org 在本机 SSL 握手失败 |
+| 契约基准 | **以 Spring Boot 习惯为准，Laravel 只是参照实现**（2026-10-06 拍板）：字段集与语义功能等价，形态冲突时从 Spring——例路由 `uri` 保留前导 `/`，不为对齐 Laravel 而去斜杠 |
+| 命名通道 | 四条来源合并：`@ForgeRoute.name` ＞ `@Forge.name` ＞ Spring 原生 `@RequestMapping(name=...)` ＞ `RouteNamingStrategy`；同一事实被两条通道给了不同值 → RF_BE_010 fail-fast |
+| methods 口径 | 声明了什么就下发什么；GET 附 `HEAD`（实测运行期能响应，属如实描述）；未声明 method 时下发完整标准方法集（空数组会让前端拿不到默认方法） |
 
 ## 阶段状态
 
@@ -42,7 +45,25 @@
 
 - ✅ **P2-1 注解层** `@ForgeRoute`（组合注解，FW7 全部 9 个映射条件属性逐个 `@AliasFor`）+
   `@Forge`（副注解）+ `@ForgeTier` + `ForgeTiers` 就近解析 + `RouteNamingStrategy` SPI；
-  starter 17 例全绿（含「与原生写法注册的 `RequestMappingInfo` 完全相等」的等价性断言）
+  含「与原生写法注册的 `RequestMappingInfo` 完全相等」的等价性断言
+- ✅ **P2-2 URI 归一化** `UriTemplate`：按花括号深度解析（含正则量词与转义右括号）、可选段拼回 `{p?}`、
+  不可参数化段原样保留不计参数
+- ✅ **P2-3 扫描层** `ForgeDeclaration`（三通道合并 + 冲突 fail-fast RF_BE_010）+
+  `HandlerMethodRouteSource`（handler 表 → `RouteInfo`）：多路径展开成多条、无 path 条件归一为根地址、
+  methods 按实测能力下发；starter 侧共 41 例，两模块 226 例全绿
+
+## 两条被实测推翻的前提（P2-3）
+
+写扫描层时我按直觉下了两个判断，都被真实 Spring 打脸，修的是实现而不是断言：
+
+1. **「无路径条件的映射匹配所有路径，所以无法下发」** —— 实测它只匹配根路径，且 Spring 已给它
+   materialize 出 `["", "/"]` 两个 pattern。正确处理是归一成一个 `/` 并去重（不去重会产出两条记录、
+   其中一条 URI 是空串），而不是跳过。
+2. **「GET 补 HEAD 是为了模仿 Laravel」** —— 实测 Spring 的 GET 映射运行期确实响应 HEAD（`doHead` 走
+   `doGet`），所以补 HEAD 是如实描述框架能力；而「未声明 method」的映射下发空数组才是错的（前端
+   `pickMethod` 会拿不到方法），实测任何方法都能匹配，就该给完整方法集。
+
+教训同前：Spring 侧的每一个「我以为」都要有一条断言兜着，断言由真实框架行为产生。
 
 ## 断言必须防"真空通过"
 
@@ -73,7 +94,7 @@
 - **emoji 的代理对不能直接喂 `%x`**：`String.format("%04x", Character)` 抛 IllegalFormatConversionException，
   必须显式转 int——这条是被对等测试当场抓到的，纯 Java 单测写不出来。
 
-- ⏳ **P2** 注解与路由扫描、URI 归一化、两端点、异常 advice
+- ⏳ **P2-4** 两端点（摘要 + 层级）+ 自动装配 + 异常 advice（错误体形态、violations 按 debug 下发）
 - ⏳ **P3** `@ForgeTier` 类/包继承接线、classifier bean、双通道冲突 fail-fast、strict 聚合上 HTTP
 - ⏳ **P4** CLI 三命令；**P5** Security 守卫 / 管理器 / `forge-levels.yml` 写回 / 内嵌摘要；**P6** 示例 + 双前端 + Laravel 端 golden + 发布
 

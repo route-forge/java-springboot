@@ -158,7 +158,7 @@ class SpringRoutingModelSpikeTest {
     }
 
     @Test
-    @DisplayName("GET 映射不自动携带 HEAD：是否补 HEAD 由适配层决定（Laravel 侧是自动的）")
+    @DisplayName("GET 映射的声明条件只含 GET（运行期能否响应 HEAD 由另一条用例证明）")
     void getMappingDoesNotImpliedHead() {
         assertThat(infoOf("show").getMethodsCondition().getMethods())
                 .isEqualTo(Set.of(RequestMethod.GET));
@@ -187,6 +187,111 @@ class SpringRoutingModelSpikeTest {
                 .isInstanceOf(org.springframework.web.util.pattern.PatternParseException.class);
         assertThatThrownBy(() -> parser.parse("/x/{a+b}"))
                 .isInstanceOf(org.springframework.web.util.pattern.PatternParseException.class);
+    }
+
+    @Test
+    @DisplayName("GET 映射在运行期确实服务 HEAD（Servlet 语义），但映射条件里不写 HEAD")
+    void getMappingServesHeadAtRuntimeOnly() throws Exception {
+        var mockMvc = org.springframework.test.web.servlet.setup.MockMvcBuilders
+                .standaloneSetup(new HeadProbeController())
+                .build();
+
+        // 声明侧：条件里只有 GET
+        assertThat(infoOfHeadProbe().getMethodsCondition().getMethods())
+                .containsExactly(RequestMethod.GET);
+        // 运行侧：HEAD 请求真的能打通（FrameworkServlet 走 doGet 并抑制响应体）
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .head("/probe/returns-204"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNoContent());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/probe/returns-204"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNoContent());
+    }
+
+    @Controller
+    static class HeadProbeController {
+
+        @GetMapping("/probe/returns-204")
+        org.springframework.http.ResponseEntity<String> hit() {
+            return org.springframework.http.ResponseEntity.noContent().build();
+        }
+    }
+
+    private static RequestMappingInfo infoOfHeadProbe() {
+        var context = new GenericWebApplicationContext();
+        context.registerBean("headProbe", HeadProbeController.class, HeadProbeController::new);
+        context.refresh();
+        var probeMapping = new RequestMappingHandlerMapping();
+        probeMapping.setApplicationContext(context);
+        probeMapping.afterPropertiesSet();
+        return probeMapping.getHandlerMethods().keySet().iterator().next();
+    }
+
+    @Test
+    @DisplayName("无路径条件的映射只匹配根路径：pattern 是 [\"\", \"/\"]，可表达为 \"/\"")
+    void pathlessMappingMatchesRootOnly() throws Exception {
+        var context = new GenericWebApplicationContext();
+        context.registerBean("pathless", PathlessController.class, PathlessController::new);
+        context.refresh();
+        var pathlessMapping = new RequestMappingHandlerMapping();
+        pathlessMapping.setApplicationContext(context);
+        pathlessMapping.afterPropertiesSet();
+
+        RequestMappingInfo info = pathlessMapping.getHandlerMethods().keySet().iterator().next();
+        // Spring 给无 path 的映射 materialize 出两个 pattern：空串与 "/"，语义上是同一个根路径
+        assertThat(info.getPatternValues()).containsExactlyInAnyOrder("", "/");
+
+        var mockMvc = org.springframework.test.web.servlet.setup.MockMvcBuilders
+                .standaloneSetup(new PathlessController()).build();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/").header("X-Only", "1"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        // 深路径打不通：所以它不是「匹配任意路径」，可以正常进元信息（uri = "/"）
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/deep/any").header("X-Only", "1"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+    }
+
+    @Controller
+    static class PathlessController {
+
+        @RequestMapping(headers = "X-Only")
+        @org.springframework.web.bind.annotation.ResponseBody
+        String any() {
+            return "hit";
+        }
+    }
+
+    @Test
+    @DisplayName("未声明 method 的映射条件为空集（不限方法），扫描侧必须自己决定下发什么")
+    void emptyMethodsConditionMeansAnyMethod() throws Exception {
+        var context = new GenericWebApplicationContext();
+        context.registerBean("anyMethod", AnyMethodController.class, AnyMethodController::new);
+        context.refresh();
+        var anyMapping = new RequestMappingHandlerMapping();
+        anyMapping.setApplicationContext(context);
+        anyMapping.afterPropertiesSet();
+
+        RequestMappingInfo info = anyMapping.getHandlerMethods().keySet().iterator().next();
+        assertThat(info.getMethodsCondition().getMethods()).isEmpty();
+
+        var mockMvc = org.springframework.test.web.servlet.setup.MockMvcBuilders
+                .standaloneSetup(new AnyMethodController()).build();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/probe/any-method"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/probe/any-method"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+    }
+
+    @Controller
+    static class AnyMethodController {
+
+        @RequestMapping("/probe/any-method")
+        String any() {
+            return "";
+        }
     }
 
     @Test
