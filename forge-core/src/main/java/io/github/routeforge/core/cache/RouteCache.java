@@ -3,8 +3,9 @@ package io.github.routeforge.core.cache;
 import io.github.routeforge.core.contract.CacheStore;
 import io.github.routeforge.core.exception.CacheDriverException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 路由元信息缓存：按层级独立存放，互不污染。缓存键形如 {@code route-forge:{level}}。
@@ -17,12 +18,12 @@ import java.util.Map;
  *   <li>负值：归一化为 {@code null}（不缓存）——负 TTL 无意义，与「不缓存」取同一行为</li>
  * </ul>
  *
- * <p><b>keys 索引</b>：为支持 {@link #clear()} 一次性清空所有层级（底层缓存不依赖通配符 key），
+ * <p><b>keys 索引</b>：为支持 {@link #clear()} 一次性清空所有层级（不依赖底层通配符能力），
  * 维护独立的 {@value #KEYS_INDEX} 列表：{@link #set} 追加、{@link #forget} 移除、{@link #clear()} 遍历删除。
- * 索引本身永久存放，不随单个层级 TTL 失效。
+ * 索引本身永久存放，不随单个层级的 TTL 过期。
  *
- * <p><b>debug 旁路</b>：开发模式下跳过读写，确保路由变更即时生效；但 {@link #clear()} <b>不旁路</b>——
- * 否则「切了 debug 又关回去」时旧缓存会复活。
+ * <p><b>debug 旁路</b>：开发模式下跳过读写，保证路由与配置变更即时生效；
+ * 但 {@link #clear()} <b>不旁路</b>——否则「切了 debug 又关回去」时旧缓存会复活。
  *
  * <p>框架无关：只依赖 {@link CacheStore}。
  */
@@ -36,9 +37,9 @@ public class RouteCache {
     /**
      * 摘要端点的缓存「层级名」。
      *
-     * <p>摘要缓存与层级缓存同表存放：摘要的 {@code route_count} 依赖各层级路由数据，
+     * <p>摘要与层级条目同表存放：摘要的 {@code route_count} 依赖各层级路由数据，
      * 任何层级失效都必须同步失效摘要，否则计数与明细漂移。该不变量由 {@link #forgetLevel} 封装，
-     * 各框架的 clear 命令一律经它失效层级，禁止直接 {@link #forget}。
+     * 各框架的 clear 命令一律经它，禁止直接 {@link #forget}。
      */
     public static final String SUMMARY_LEVEL = "summary";
 
@@ -48,7 +49,7 @@ public class RouteCache {
 
     /**
      * @param store     底层缓存；{@code null} 等价「不缓存」
-     * @param debugMode 开发模式：跳过缓存读写，保证路由变更即时生效
+     * @param debugMode 开发模式（Spring 侧即 {@code debug=true}）：跳过缓存读写
      * @param ttl       统一 TTL 秒；{@code null} 不缓存、{@code 0} 永久、负值归一为不缓存
      */
     public RouteCache(CacheStore store, boolean debugMode, Integer ttl) {
@@ -57,22 +58,26 @@ public class RouteCache {
         this.ttl = ttl != null && ttl < 0 ? null : ttl;
     }
 
-    /** 取某层级的缓存条目；未启用缓存、debug 模式、未命中或值不是条目结构时返回 {@code null}。 */
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> get(String level) {
+    /**
+     * 取某层级的缓存条目。
+     *
+     * <p>类型不符（底层被别的组件写过脏数据、或序列化实现返回了非预期结构）按未命中处理，
+     * 与 PHP 侧 {@code is_array($value) ?: null} 同判据——绝不让脏缓存条目变成端点 500。
+     */
+    public <T> T get(String level, Class<T> type) {
         if (store == null || debugMode) {
             return null;
         }
         try {
             Object value = store.get(key(level));
-            return value instanceof Map<?, ?> map ? (Map<String, Object>) map : null;
+            return type.isInstance(value) ? type.cast(value) : null;
         } catch (RuntimeException e) {
             throw wrap(e);
         }
     }
 
     /** 写入某层级条目；未启用缓存、不缓存模式或 debug 模式下静默跳过。 */
-    public void set(String level, Map<String, Object> payload) {
+    public void set(String level, Object payload) {
         if (store == null || debugMode || ttl == null) {
             return;
         }
@@ -102,8 +107,8 @@ public class RouteCache {
     /**
      * 失效单个层级，并同步失效摘要缓存。
      *
-     * <p>不变量（勿绕过）：摘要的 {@code route_count} 依赖各层级路由数据，层级失效后摘要必须一并失效，
-     * 否则摘要计数与层级明细漂移。各框架的 {@code clear --level} 一律走本方法。
+     * <p>不变量（勿绕过）：摘要的 {@code route_count} 依赖各层级路由数据，层级失效后摘要必须一并失效。
+     * 各框架的 {@code clear --level} 一律走本方法。
      */
     public void forgetLevel(String level) {
         forget(level);
@@ -172,7 +177,7 @@ public class RouteCache {
             return new ArrayList<>(list);
         }
         if (raw instanceof Object[] array) {
-            return new ArrayList<>(List.of(array));
+            return new ArrayList<>(Arrays.asList(array));
         }
         return null;
     }

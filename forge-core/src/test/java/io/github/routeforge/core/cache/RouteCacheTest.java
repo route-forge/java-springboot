@@ -124,7 +124,7 @@ class RouteCacheTest {
             store.values.put("route-forge:admin", payload("admin"));
             RouteCache cache = new RouteCache(store, true, 3600);
 
-            assertThat(cache.get("admin")).isNull();
+            assertThat(cache.get("admin", Map.class)).isNull();
             cache.set("client", payload("client"));
             cache.forget("admin");
             cache.clear();
@@ -141,7 +141,7 @@ class RouteCacheTest {
             assertThat(cache.disabled()).isTrue();
             cache.set("admin", payload("admin"));
             cache.clear();
-            assertThat(cache.get("admin")).isNull();
+            assertThat(cache.get("admin", Map.class)).isNull();
         }
     }
 
@@ -240,7 +240,7 @@ class RouteCacheTest {
             RecordingStore store = new RecordingStore();
             store.values.put("route-forge:admin", "garbage");
 
-            assertThat(new RouteCache(store, false, 60).get("admin")).isNull();
+            assertThat(new RouteCache(store, false, 60).get("admin", Map.class)).isNull();
         }
 
         @Test
@@ -250,7 +250,7 @@ class RouteCacheTest {
             store.failNext = true;
             RouteCache cache = new RouteCache(store, false, 60);
 
-            assertThatThrownBy(() -> cache.get("admin"))
+            assertThatThrownBy(() -> cache.get("admin", Map.class))
                     .isInstanceOfSatisfying(CacheDriverException.class, error -> {
                         assertThat(error.code()).isEqualTo("RF_BE_003");
                         assertThat(error.httpStatus()).isEqualTo(500);

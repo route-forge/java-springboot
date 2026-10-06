@@ -1,0 +1,1718 @@
+{
+    "provenance": {
+        "generator": "fixtures/php/oracle-repository.php",
+        "php": "8.5.11",
+        "phpCommonCommit": "f3fa70d",
+        "note": "expected 由真实 php-common 代码产出，Java 侧不得按文档自编断言"
+    },
+    "cases": [
+        {
+            "input": {
+                "name": "level-routes-basic",
+                "levels": {
+                    "admin": {
+                        "description": "系统管理接口",
+                        "load": "lazy",
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    },
+                    "public": {
+                        "description": "公共接口",
+                        "load": "eager",
+                        "match": {
+                            "prefix": [
+                                "auth"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "level",
+                        "admin"
+                    ],
+                    [
+                        "level",
+                        "public"
+                    ],
+                    [
+                        "level",
+                        "client"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users.index",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "admin.users.show",
+                        "uri": "admin/users/{user}",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [
+                            "user"
+                        ],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "auth.login",
+                        "uri": "auth/login",
+                        "methods": [
+                            "POST"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "client.orders",
+                        "uri": "client/orders",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:admin": {
+                        "ok": true,
+                        "json": "{\"level\":\"admin\",\"routes\":{\"admin.users.index\":{\"uri\":\"admin/users\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}},\"admin.users.show\":{\"uri\":\"admin/users/{user}\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[\"user\"],\"parameter_defaults\":{}}}}"
+                    },
+                    "level:public": {
+                        "ok": true,
+                        "json": "{\"level\":\"public\",\"routes\":{\"auth.login\":{\"uri\":\"auth/login\",\"methods\":[\"POST\"],\"parameters\":[],\"parameter_defaults\":{}}}}"
+                    },
+                    "level:client": {
+                        "ok": false,
+                        "code": "RF_BE_002",
+                        "httpStatus": 404,
+                        "message": "Unknown level: client"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:admin",
+                    "put:route-forge:admin:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null",
+                    "get:route-forge:public",
+                    "put:route-forge:public:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:admin",
+                    "route-forge:_keys",
+                    "route-forge:public"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "empty-level-must-serialize-as-object",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    },
+                    "empty": {
+                        "match": {
+                            "prefix": [
+                                "nope"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "level",
+                        "empty"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:empty": {
+                        "ok": true,
+                        "json": "{\"level\":\"empty\",\"routes\":{}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:empty",
+                    "put:route-forge:empty:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:empty",
+                    "route-forge:_keys"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "unassigned-level",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "level",
+                        "unassigned"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "debug.info",
+                        "uri": "_debug/info",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "metrics",
+                        "uri": "_metrics",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "auth"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:unassigned": {
+                        "ok": true,
+                        "json": "{\"level\":\"unassigned\",\"routes\":{\"debug.info\":{\"uri\":\"_debug/info\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}},\"metrics\":{\"uri\":\"_metrics\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}}}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:unassigned",
+                    "put:route-forge:unassigned:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:unassigned",
+                    "route-forge:_keys"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "aliases-injected-into-target-level",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    },
+                    "client": {
+                        "match": {
+                            "prefix": [
+                                "client"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {
+                    "client.orders.list": "client.orders.index"
+                },
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "level",
+                        "client"
+                    ],
+                    [
+                        "level",
+                        "admin"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "client.orders.index",
+                        "uri": "client/orders",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:client": {
+                        "ok": true,
+                        "json": "{\"level\":\"client\",\"routes\":{\"client.orders.index\":{\"uri\":\"client/orders\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}},\"client.orders.list\":{\"uri\":\"client/orders\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}}}}"
+                    },
+                    "level:admin": {
+                        "ok": true,
+                        "json": "{\"level\":\"admin\",\"routes\":{\"admin.users\":{\"uri\":\"admin/users\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}}}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:client",
+                    "put:route-forge:client:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null",
+                    "get:route-forge:admin",
+                    "put:route-forge:admin:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:client",
+                    "route-forge:_keys",
+                    "route-forge:admin"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "alias-follows-unassigned-target",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {
+                    "legacy.orphan": "free.route"
+                },
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "level",
+                        "unassigned"
+                    ],
+                    [
+                        "level",
+                        "admin"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "free.route",
+                        "uri": "free/route",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:unassigned": {
+                        "ok": true,
+                        "json": "{\"level\":\"unassigned\",\"routes\":{\"free.route\":{\"uri\":\"free/route\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}},\"legacy.orphan\":{\"uri\":\"free/route\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}}}}"
+                    },
+                    "level:admin": {
+                        "ok": true,
+                        "json": "{\"level\":\"admin\",\"routes\":{}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:unassigned",
+                    "put:route-forge:unassigned:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null",
+                    "get:route-forge:admin",
+                    "put:route-forge:admin:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:unassigned",
+                    "route-forge:_keys",
+                    "route-forge:admin"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "own-endpoints-excluded",
+                "levels": {
+                    "manage": {
+                        "match": {
+                            "middleware": [
+                                "manage"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [
+                    "/_forge/routes"
+                ],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "level",
+                        "manage"
+                    ],
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": null,
+                        "uri": "_forge/routes/manage",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "manage"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "forge.routes.manage",
+                        "uri": "_forge/routes/manage/named",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "manage"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "manage.reports",
+                        "uri": "manage/reports",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "manage"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:manage": {
+                        "ok": true,
+                        "json": "{\"level\":\"manage\",\"routes\":{\"manage.reports\":{\"uri\":\"manage/reports\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}}}}"
+                    },
+                    "summary": {
+                        "ok": true,
+                        "json": "{\"schemeVersion\":1,\"levels\":{\"manage\":{\"description\":\"\",\"load\":\"lazy\",\"route_count\":1,\"route\":{\"uri\":\"/_forge/routes/manage\",\"methods\":[\"GET\",\"HEAD\"]}},\"unassigned\":{\"description\":\"未命中任何层级的路由\",\"load\":\"lazy\",\"route_count\":0,\"route\":{\"uri\":\"/_forge/routes/unassigned\",\"methods\":[\"GET\",\"HEAD\"]}}},\"config\":{\"strict_mode\":false,\"endpoint_prefix\":\"/_forge/routes\",\"url_prefix\":null,\"cache_ttl\":3600}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:manage",
+                    "put:route-forge:manage:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null",
+                    "get:route-forge:summary",
+                    "put:route-forge:summary:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:manage",
+                    "route-forge:_keys",
+                    "route-forge:summary"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "unknown-level-throws",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "level",
+                        "ghost"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:ghost": {
+                        "ok": false,
+                        "code": "RF_BE_002",
+                        "httpStatus": 404,
+                        "message": "Unknown level: ghost"
+                    }
+                },
+                "cacheCalls": [],
+                "storedKeys": []
+            }
+        },
+        {
+            "input": {
+                "name": "summary-defaults",
+                "levels": {
+                    "admin": {
+                        "description": "系统管理接口",
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    },
+                    "public": {
+                        "load": "eager",
+                        "match": {
+                            "prefix": [
+                                "auth"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "other",
+                        "uri": "x/y",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "summary": {
+                        "ok": true,
+                        "json": "{\"schemeVersion\":1,\"levels\":{\"admin\":{\"description\":\"系统管理接口\",\"load\":\"lazy\",\"route_count\":1,\"route\":{\"uri\":\"/_forge/routes/admin\",\"methods\":[\"GET\",\"HEAD\"]}},\"public\":{\"description\":\"\",\"load\":\"eager\",\"route_count\":0,\"route\":{\"uri\":\"/_forge/routes/public\",\"methods\":[\"GET\",\"HEAD\"]}},\"unassigned\":{\"description\":\"未命中任何层级的路由\",\"load\":\"lazy\",\"route_count\":1,\"route\":{\"uri\":\"/_forge/routes/unassigned\",\"methods\":[\"GET\",\"HEAD\"]}}},\"config\":{\"strict_mode\":false,\"endpoint_prefix\":\"/_forge/routes\",\"url_prefix\":null,\"cache_ttl\":3600}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:summary",
+                    "put:route-forge:summary:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:summary",
+                    "route-forge:_keys"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "summary-custom-prefix-and-negative-ttl",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": -5,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "forge/routes/",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": -5
+                },
+                "ops": [
+                    [
+                        "summary"
+                    ],
+                    [
+                        "level",
+                        "admin"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "summary": {
+                        "ok": true,
+                        "json": "{\"schemeVersion\":1,\"levels\":{\"admin\":{\"description\":\"\",\"load\":\"lazy\",\"route_count\":1,\"route\":{\"uri\":\"/forge/routes/admin\",\"methods\":[\"GET\",\"HEAD\"]}},\"unassigned\":{\"description\":\"未命中任何层级的路由\",\"load\":\"lazy\",\"route_count\":0,\"route\":{\"uri\":\"/forge/routes/unassigned\",\"methods\":[\"GET\",\"HEAD\"]}}},\"config\":{\"strict_mode\":false,\"endpoint_prefix\":\"/forge/routes\",\"url_prefix\":null,\"cache_ttl\":null}}"
+                    },
+                    "level:admin": {
+                        "ok": true,
+                        "json": "{\"level\":\"admin\",\"routes\":{\"admin.users\":{\"uri\":\"admin/users\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}}}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:summary",
+                    "get:route-forge:admin"
+                ],
+                "storedKeys": []
+            }
+        },
+        {
+            "input": {
+                "name": "summary-empty-url-prefix-becomes-null",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 0,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": "",
+                    "strict_mode": false,
+                    "cache_ttl": 0
+                },
+                "ops": [
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "summary": {
+                        "ok": true,
+                        "json": "{\"schemeVersion\":1,\"levels\":{\"admin\":{\"description\":\"\",\"load\":\"lazy\",\"route_count\":1,\"route\":{\"uri\":\"/_forge/routes/admin\",\"methods\":[\"GET\",\"HEAD\"]}},\"unassigned\":{\"description\":\"未命中任何层级的路由\",\"load\":\"lazy\",\"route_count\":0,\"route\":{\"uri\":\"/_forge/routes/unassigned\",\"methods\":[\"GET\",\"HEAD\"]}}},\"config\":{\"strict_mode\":false,\"endpoint_prefix\":\"/_forge/routes\",\"url_prefix\":null,\"cache_ttl\":0}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:summary",
+                    "put:route-forge:summary:null",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:summary",
+                    "route-forge:_keys"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "summary-url-prefix-passed-through",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": "https://api.example.com/v1",
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "summary": {
+                        "ok": true,
+                        "json": "{\"schemeVersion\":1,\"levels\":{\"admin\":{\"description\":\"\",\"load\":\"lazy\",\"route_count\":1,\"route\":{\"uri\":\"/_forge/routes/admin\",\"methods\":[\"GET\",\"HEAD\"]}},\"unassigned\":{\"description\":\"未命中任何层级的路由\",\"load\":\"lazy\",\"route_count\":0,\"route\":{\"uri\":\"/_forge/routes/unassigned\",\"methods\":[\"GET\",\"HEAD\"]}}},\"config\":{\"strict_mode\":false,\"endpoint_prefix\":\"/_forge/routes\",\"url_prefix\":\"https://api.example.com/v1\",\"cache_ttl\":3600}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:summary",
+                    "put:route-forge:summary:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:summary",
+                    "route-forge:_keys"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "summary-scheme-version-override",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 60,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 60,
+                    "scheme_version": 2
+                },
+                "ops": [
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "summary": {
+                        "ok": true,
+                        "json": "{\"schemeVersion\":2,\"levels\":{\"admin\":{\"description\":\"\",\"load\":\"lazy\",\"route_count\":1,\"route\":{\"uri\":\"/_forge/routes/admin\",\"methods\":[\"GET\",\"HEAD\"]}},\"unassigned\":{\"description\":\"未命中任何层级的路由\",\"load\":\"lazy\",\"route_count\":0,\"route\":{\"uri\":\"/_forge/routes/unassigned\",\"methods\":[\"GET\",\"HEAD\"]}}},\"config\":{\"strict_mode\":false,\"endpoint_prefix\":\"/_forge/routes\",\"url_prefix\":null,\"cache_ttl\":60}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:summary",
+                    "put:route-forge:summary:60",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:summary",
+                    "route-forge:_keys"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "summary-counts-include-aliases-once",
+                "levels": {
+                    "client": {
+                        "match": {
+                            "prefix": [
+                                "client"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {
+                    "a.one": "client.x",
+                    "a.two": "client.x"
+                },
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "client.x",
+                        "uri": "client/x",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "client.y",
+                        "uri": "client/y",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "summary": {
+                        "ok": true,
+                        "json": "{\"schemeVersion\":1,\"levels\":{\"client\":{\"description\":\"\",\"load\":\"lazy\",\"route_count\":4,\"route\":{\"uri\":\"/_forge/routes/client\",\"methods\":[\"GET\",\"HEAD\"]}},\"unassigned\":{\"description\":\"未命中任何层级的路由\",\"load\":\"lazy\",\"route_count\":0,\"route\":{\"uri\":\"/_forge/routes/unassigned\",\"methods\":[\"GET\",\"HEAD\"]}}},\"config\":{\"strict_mode\":false,\"endpoint_prefix\":\"/_forge/routes\",\"url_prefix\":null,\"cache_ttl\":3600}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:summary",
+                    "put:route-forge:summary:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:summary",
+                    "route-forge:_keys"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "summary-strict-mode-reported-first",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": true,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": true,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "loose",
+                        "uri": "loose/route",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "summary": {
+                        "ok": false,
+                        "code": "RF_BE_009",
+                        "httpStatus": 500,
+                        "message": "Route Forge strict_mode found 1 route configuration problem(s):\n  1 named route(s) are not matched by any level rule (add ->tier(...), a match rule in config, or let the classifier return a level):\n    - loose (GET loose/route)"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:summary"
+                ],
+                "storedKeys": []
+            }
+        },
+        {
+            "input": {
+                "name": "manager-data-shape",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {
+                    "legacy.users": "admin.users"
+                },
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "manager"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [
+                            "auth"
+                        ],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "admin.posts",
+                        "uri": "admin/posts/{page}",
+                        "methods": [
+                            "GET"
+                        ],
+                        "parameters": [
+                            "page"
+                        ],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "free.route",
+                        "uri": "free/route",
+                        "methods": [
+                            "PUT"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": null,
+                        "uri": "unnamed/route",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "manager": {
+                        "ok": true,
+                        "json": "{\"routes\":[{\"name\":\"admin.users\",\"uri\":\"admin/users\",\"methods\":[\"GET\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[\"auth\"],\"tier\":\"admin\"},{\"name\":\"admin.posts\",\"uri\":\"admin/posts/{page}\",\"methods\":[\"GET\"],\"parameters\":[\"page\"],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"admin\"},{\"name\":\"free.route\",\"uri\":\"free/route\",\"methods\":[\"PUT\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"unassigned\"},{\"name\":\"legacy.users\",\"uri\":\"admin/users\",\"methods\":[\"GET\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[\"auth\"],\"tier\":\"admin\",\"alias_of\":\"admin.users\"}],\"tiers\":{\"admin\":3,\"unassigned\":1}}"
+                    }
+                },
+                "cacheCalls": [],
+                "storedKeys": []
+            }
+        },
+        {
+            "input": {
+                "name": "manager-data-alias-spreads-across-duplicate-levels",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    },
+                    "manage": {
+                        "match": {
+                            "prefix": [
+                                "manage"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {
+                    "legacy.thing": "dup.thing"
+                },
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "manager"
+                    ],
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "dup.thing",
+                        "uri": "admin/dup",
+                        "methods": [
+                            "GET"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "dup.thing",
+                        "uri": "manage/dup",
+                        "methods": [
+                            "GET"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "manager": {
+                        "ok": true,
+                        "json": "{\"routes\":[{\"name\":\"dup.thing\",\"uri\":\"admin/dup\",\"methods\":[\"GET\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"admin\"},{\"name\":\"dup.thing\",\"uri\":\"manage/dup\",\"methods\":[\"GET\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"manage\"},{\"name\":\"legacy.thing\",\"uri\":\"admin/dup\",\"methods\":[\"GET\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"admin\",\"alias_of\":\"dup.thing\"},{\"name\":\"legacy.thing\",\"uri\":\"manage/dup\",\"methods\":[\"GET\"],\"parameters\":[],\"parameter_defaults\":[],\"middleware\":[],\"tier\":\"manage\",\"alias_of\":\"dup.thing\"}],\"tiers\":{\"admin\":1,\"manage\":2}}"
+                    },
+                    "summary": {
+                        "ok": true,
+                        "json": "{\"schemeVersion\":1,\"levels\":{\"admin\":{\"description\":\"\",\"load\":\"lazy\",\"route_count\":1,\"route\":{\"uri\":\"/_forge/routes/admin\",\"methods\":[\"GET\",\"HEAD\"]}},\"manage\":{\"description\":\"\",\"load\":\"lazy\",\"route_count\":2,\"route\":{\"uri\":\"/_forge/routes/manage\",\"methods\":[\"GET\",\"HEAD\"]}},\"unassigned\":{\"description\":\"未命中任何层级的路由\",\"load\":\"lazy\",\"route_count\":0,\"route\":{\"uri\":\"/_forge/routes/unassigned\",\"methods\":[\"GET\",\"HEAD\"]}}},\"config\":{\"strict_mode\":false,\"endpoint_prefix\":\"/_forge/routes\",\"url_prefix\":null,\"cache_ttl\":3600}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:summary",
+                    "put:route-forge:summary:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:summary",
+                    "route-forge:_keys"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "strict-mode-aggregates-violations",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": true,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": true,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "level",
+                        "admin"
+                    ],
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": "loose.route",
+                        "uri": "loose/route",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    },
+                    {
+                        "name": null,
+                        "uri": "admin/unnamed",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:admin": {
+                        "ok": false,
+                        "code": "RF_BE_009",
+                        "httpStatus": 500,
+                        "message": "Route Forge strict_mode found 2 route configuration problem(s):\n  1 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:\n    - GET admin/unnamed -> level [admin] via a config match rule\n  1 named route(s) are not matched by any level rule (add ->tier(...), a match rule in config, or let the classifier return a level):\n    - loose.route (GET loose/route)"
+                    },
+                    "summary": {
+                        "ok": false,
+                        "code": "RF_BE_009",
+                        "httpStatus": 500,
+                        "message": "Route Forge strict_mode found 2 route configuration problem(s):\n  1 route(s) are assigned to a level but have no name, so they cannot be referenced by url() and appear in no endpoint, type map or list row:\n    - GET admin/unnamed -> level [admin] via a config match rule\n  1 named route(s) are not matched by any level rule (add ->tier(...), a match rule in config, or let the classifier return a level):\n    - loose.route (GET loose/route)"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:admin",
+                    "get:route-forge:summary"
+                ],
+                "storedKeys": []
+            }
+        },
+        {
+            "input": {
+                "name": "strict-mode-clean-passes",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": true,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": true,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "level",
+                        "admin"
+                    ],
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:admin": {
+                        "ok": true,
+                        "json": "{\"level\":\"admin\",\"routes\":{\"admin.users\":{\"uri\":\"admin/users\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}}}}"
+                    },
+                    "summary": {
+                        "ok": true,
+                        "json": "{\"schemeVersion\":1,\"levels\":{\"admin\":{\"description\":\"\",\"load\":\"lazy\",\"route_count\":1,\"route\":{\"uri\":\"/_forge/routes/admin\",\"methods\":[\"GET\",\"HEAD\"]}},\"unassigned\":{\"description\":\"未命中任何层级的路由\",\"load\":\"lazy\",\"route_count\":0,\"route\":{\"uri\":\"/_forge/routes/unassigned\",\"methods\":[\"GET\",\"HEAD\"]}}},\"config\":{\"strict_mode\":true,\"endpoint_prefix\":\"/_forge/routes\",\"url_prefix\":null,\"cache_ttl\":3600}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:admin",
+                    "put:route-forge:admin:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null",
+                    "get:route-forge:summary",
+                    "put:route-forge:summary:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:admin",
+                    "route-forge:_keys",
+                    "route-forge:summary"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "cache-hit-on-second-call",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "level",
+                        "admin"
+                    ],
+                    [
+                        "level",
+                        "admin"
+                    ],
+                    [
+                        "summary"
+                    ],
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:admin": {
+                        "ok": true,
+                        "json": "{\"level\":\"admin\",\"routes\":{\"admin.users\":{\"uri\":\"admin/users\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}}}}"
+                    },
+                    "summary": {
+                        "ok": true,
+                        "json": "{\"schemeVersion\":1,\"levels\":{\"admin\":{\"description\":\"\",\"load\":\"lazy\",\"route_count\":1,\"route\":{\"uri\":\"/_forge/routes/admin\",\"methods\":[\"GET\",\"HEAD\"]}},\"unassigned\":{\"description\":\"未命中任何层级的路由\",\"load\":\"lazy\",\"route_count\":0,\"route\":{\"uri\":\"/_forge/routes/unassigned\",\"methods\":[\"GET\",\"HEAD\"]}}},\"config\":{\"strict_mode\":false,\"endpoint_prefix\":\"/_forge/routes\",\"url_prefix\":null,\"cache_ttl\":3600}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:admin",
+                    "put:route-forge:admin:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null",
+                    "get:route-forge:admin",
+                    "get:route-forge:summary",
+                    "put:route-forge:summary:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null",
+                    "get:route-forge:summary"
+                ],
+                "storedKeys": [
+                    "route-forge:admin",
+                    "route-forge:_keys",
+                    "route-forge:summary"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "cache-disabled-by-null-ttl",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 3600,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 3600
+                },
+                "ops": [
+                    [
+                        "level",
+                        "admin"
+                    ],
+                    [
+                        "level",
+                        "admin"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:admin": {
+                        "ok": true,
+                        "json": "{\"level\":\"admin\",\"routes\":{\"admin.users\":{\"uri\":\"admin/users\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}}}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:admin",
+                    "put:route-forge:admin:3600",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null",
+                    "get:route-forge:admin"
+                ],
+                "storedKeys": [
+                    "route-forge:admin",
+                    "route-forge:_keys"
+                ]
+            }
+        },
+        {
+            "input": {
+                "name": "cache-permanent-on-zero-ttl",
+                "levels": {
+                    "admin": {
+                        "match": {
+                            "prefix": [
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "ttl": 0,
+                "strict": false,
+                "aliases": {},
+                "uriPrefixes": [],
+                "runtime": {
+                    "endpoint_prefix": "/_forge/routes",
+                    "url_prefix": null,
+                    "strict_mode": false,
+                    "cache_ttl": 0
+                },
+                "ops": [
+                    [
+                        "level",
+                        "admin"
+                    ],
+                    [
+                        "summary"
+                    ]
+                ],
+                "infos": [
+                    {
+                        "name": "admin.users",
+                        "uri": "admin/users",
+                        "methods": [
+                            "GET",
+                            "HEAD"
+                        ],
+                        "parameters": [],
+                        "parameterDefaults": {},
+                        "middleware": [],
+                        "tier": null,
+                        "forgeAliases": []
+                    }
+                ]
+            },
+            "expected": {
+                "results": {
+                    "level:admin": {
+                        "ok": true,
+                        "json": "{\"level\":\"admin\",\"routes\":{\"admin.users\":{\"uri\":\"admin/users\",\"methods\":[\"GET\",\"HEAD\"],\"parameters\":[],\"parameter_defaults\":{}}}}"
+                    },
+                    "summary": {
+                        "ok": true,
+                        "json": "{\"schemeVersion\":1,\"levels\":{\"admin\":{\"description\":\"\",\"load\":\"lazy\",\"route_count\":1,\"route\":{\"uri\":\"/_forge/routes/admin\",\"methods\":[\"GET\",\"HEAD\"]}},\"unassigned\":{\"description\":\"未命中任何层级的路由\",\"load\":\"lazy\",\"route_count\":0,\"route\":{\"uri\":\"/_forge/routes/unassigned\",\"methods\":[\"GET\",\"HEAD\"]}}},\"config\":{\"strict_mode\":false,\"endpoint_prefix\":\"/_forge/routes\",\"url_prefix\":null,\"cache_ttl\":0}}"
+                    }
+                },
+                "cacheCalls": [
+                    "get:route-forge:admin",
+                    "put:route-forge:admin:null",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null",
+                    "get:route-forge:summary",
+                    "put:route-forge:summary:null",
+                    "get:route-forge:_keys",
+                    "put:route-forge:_keys:null"
+                ],
+                "storedKeys": [
+                    "route-forge:admin",
+                    "route-forge:_keys",
+                    "route-forge:summary"
+                ]
+            }
+        }
+    ]
+}
