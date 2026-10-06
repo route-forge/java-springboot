@@ -118,10 +118,29 @@ Java 侧落地口径：
 `forge.manager.*` / 层级与摘要端点自身一律不进任何元信息，两个维度：按注册来源（本包 controller）+
 按规范化后的 `endpoint_prefix` 做 URI **段级**前缀排除。否则 `strict_mode=true` 时包会把自己的端点报成宿主的配置错误。
 
-### 4.6 缓存 ⟨P3⟩
+### 4.6 缓存层与装配生命周期
 
-`ForgeCacheStore` SPI 自写（不用 Spring Cache 抽象），键 `route-forge:<level>` / `route-forge:summary` /
-`route-forge:_keys` 索引；`forgetLevel` 必须连带失效 summary；debug 模式旁路读写但 `clear` 不旁路。
+`CacheStore` SPI 自写（不接 Spring Cache 抽象），键 `route-forge:<level>` / `route-forge:summary` /
+`route-forge:_keys` 索引；`forgetLevel` 必须连带失效 summary。
+
+`ForgeRouteRegistry` 为单例，只做**装配**（层级解析器、别名解析器、过滤器、缓存的构造与注入），
+不持有扫描结果；所有取数一律经缓存，miss 才真正扫。于是缓存层在 Java 侧不是多余的第二层，
+而是唯一的失效点——TTL 三态、`clear --level` 连带失效 summary、Redis 多实例共享这些语义
+才与 PHP 侧逐条可比（PHP 是每请求新建的进程模型，跨请求复用本来就全靠缓存）。
+失效入口只有三个：`--forge:clear`、管理器保存配置后、管理器与端点的显式刷新。
+
+### 4.7 开发环境判据
+
+**开发环境判据 = Spring 的 `debug=true`**（与 Laravel 的 `APP_DEBUG` 同构，一根线管三处）：
+
+| 受控行为 | 判据 | 说明 |
+|---|---|---|
+| 缓存读写旁路 | `debug=true` | 保证改路由/改配置即时生效；`clear` 不旁路（否则关回 debug 时旧缓存复活） |
+| `RF_BE_009` 结构化 `violations` 下发 | `debug=true` | 清单是宿主越界路由的名字与 URI 目录，生产只给 `code` + `message` |
+| 管理器页面注册 | `debug=true` **且** `forge.manager.enabled=true` | 后者默认 false——误开 debug 最多旁路缓存，不会凭空暴露可写配置的端点；再叠加 IP 白名单共三道 |
+
+`debug=true` 生效时启动日志打一条 WARN 横幅，明示「缓存已旁路，每个请求重扫路由表」，避免把它当成性能开关长期开着。
+
 
 ## 5. 工具链
 

@@ -18,6 +18,10 @@
 | 配置保存 | 只写独立 `forge-levels.yml`（备份 + 回读比对），绝不改宿主 `application.yml` |
 | CLI | `ApplicationRunner` 参数式：`--forge:list` / `--forge:types` / `--forge:clear` |
 | 缓存 | 自写 `CacheStore` SPI（不接 Spring Cache），内存实现 + Redis 可选 |
+| 开发态判据 | 用 Spring 的 `debug=true`（与 `APP_DEBUG` 同构）驱动缓存旁路与 `violations` 下发；管理器额外要 `forge.manager.enabled=true`（默认 false）才注册，即 **debug AND 显式开关**，误开 debug 不会凭空暴露写配置入口 |
+| 生命周期 | `ForgeRouteRegistry` 单例只装配、不持结果；取数一律走 `RouteCache`，miss 才扫。缓存层因此仍是唯一失效点，TTL/`clear`/Redis 语义与 PHP 逐条可比 |
+| 对等粒度 | 直调仓库层：oracle 调 `RouteRepository::getLevel()/getSummary()` 与 `TypeGenerator` 冻结逐字段真值；真实 Laravel HTTP 响应留到 P6 覆盖序列化细节（键序、null 省略、空层级 `{}`） |
+| 版本线 | 开发期 `0.1.0`；「全量对等 SPEC + 双前端联调通过」是 `1.0.0` 的门槛 |
 | 文档 | 本仓自带一份 Java SPEC；跨语言端点契约以 `route-forge/php-laravel/.docs/SPEC.md` 为权威 |
 | 前端 | `@route-forge/*` 3.1.0 零改动接入（已实证：契约即插件点，vue/react 包里 0 处 PHP 痕迹） |
 | Gradle 环境 | 依赖与发行包全在项目本地 `<根>/.gradle`（gitignore），与用户目录隔离；镜像配置在 `.gradle/init.d/cn-mirrors.gradle.kts`（依赖腾讯、插件阿里、官方兜底），不入 git。`settings.gradle.kts` 只声明 mavenCentral。wrapper 的 `distributionUrl` 指腾讯——本机缓存的 9.7.0 发行包正是该 URL 的哈希，而官方 services.gradle.org 在本机 SSL 握手失败 |
@@ -57,13 +61,16 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
 5. PHP 空关联数组 `json_encode` 出 `[]` 而非 `{}`，fixture 读回的层级配置可能是空 List → `LevelsConfig` 值类型必须宽容。
 6. classifier 抛错文本含异常类名，两侧必然不同（PHP 无包前缀）→ 唯一按归一化比对的字段。
 
-## 待拍板（进入 P2/P5 前需要定）
+## 待办与后续需要拍板的点
 
-1. **管理器页面的「开发环境」判据**：Laravel 用 `APP_DEBUG`；Spring 侧 `debug=true` 是框架自带的调试开关，
-   语义与「允许写配置文件」不完全重合。候选：`debug=true` / 专用 profile / 只留 `forge.manager.enabled` + IP 白名单（**倾向此项 + 生产环境显式告警**）。
-2. **缓存 debug 旁路是否复用同一判据**（同上，PHP 侧旁路与管理器同源）。
-3. **classifier 是否常驻 bean**：若常驻，路由变更会触发重扫（Laravel 闭包也是常驻的，倾向「常驻」以对齐行为）。
-4. **版本线起点**：当前 `0.1.0`，发布时是否直接按 `1.0.0` 起算（家族其他包已到 2.x/3.x，但 Java 适配是独立一条线）。
+当前无阻塞项。下一步是 P1e（`RouteAnalyzer` + `RouteRepository`，PHP 侧 540 + 475 行）。
+
+进入 P5 前有两处需要先定，届时会带上下文再问：
+
+1. `endpoint_middleware` 的标签字符串怎么翻译成 Security 表达式（`hasAuthority(标签)` / `hasRole(...)` / 允许写 SpEL 原样）；
+   它决定 starter 的可选依赖形状与降级路径。
+2. 内嵌摘要（`@forgeSummary` 的等价物）是否强制依赖 Thymeleaf——倾向「纯 Java 渲染 API + Thymeleaf 方言片段可选」，
+   不逼没有模板引擎的纯 SPA 宿主引依赖。
 
 ## 恢复步骤
 
