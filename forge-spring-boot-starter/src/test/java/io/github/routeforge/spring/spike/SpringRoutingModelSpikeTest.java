@@ -173,6 +173,23 @@ class SpringRoutingModelSpikeTest {
     }
 
     @Test
+    @DisplayName("Spring 自己接受的模板形态界定了解析器的输入空间：正则里的花括号必须转义")
+    void springDefinesTheTemplateInputSpace() {
+        var parser = new org.springframework.web.util.pattern.PathPatternParser();
+
+        // 量词与转义右括号都合法；未转义的 } 在字符类里 Spring 直接拒绝
+        assertThat(parser.parse("/x/{id:\\d{4}}").getPatternString()).isEqualTo("/x/{id:\\d{4}}");
+        assertThat(parser.parse("/x/{code:[a-z\\}]+}").getPatternString()).isEqualTo("/x/{code:[a-z\\}]+}");
+        assertThatThrownBy(() -> parser.parse("/x/{code:[a-z}]+}"))
+                .isInstanceOf(org.springframework.web.util.pattern.PatternParseException.class);
+        // 名字起始不能是数字、也不能含 +：这类模板不会来自 Spring，解析器仍按不可参数化兜住
+        assertThatThrownBy(() -> parser.parse("/x/{9lives}"))
+                .isInstanceOf(org.springframework.web.util.pattern.PatternParseException.class);
+        assertThatThrownBy(() -> parser.parse("/x/{a+b}"))
+                .isInstanceOf(org.springframework.web.util.pattern.PatternParseException.class);
+    }
+
+    @Test
     @DisplayName("PathPattern 在 Framework 7 不再公开 getVariableNames()：参数名须自解析模板")
     void pathPatternDoesNotExposeVariableNamesPublicly() {
         var pattern = infoOf("show").getPathPatternsCondition().getPatterns().iterator().next();

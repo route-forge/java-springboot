@@ -118,10 +118,25 @@ Framework 7 实测事实（由 `SpringRoutingModelSpikeTest` 7 例钉成回归�
 
 ### 4.3 URI 与参数归一化 ⟨P2⟩
 
-- 参数名由核心层自写的模板解析器从 URI 取得（Framework 7 的 `PathPattern` 不给变量名），
-  解析器要能正确处理嵌套花括号（`{id:\d{4}}` 这类正则里带 `{4}`）；
-- 剥离 `{name:regex}` 约束、`{*name}`/`{version}` 等模板变量原样输出但不进 `parameters`（Spring 特有的
-  `**` 通配段保留字面，SPEC 注明前端不可参数化）。
+`UriTemplate`（`forge-core`）是 **Java 侧独有部件，PHP 家族无对等实现**：Laravel 的 `Route::uri()` 不带
+正则约束（约束走 `->where()`）、也没有 `{*path}` 捕获段，因此这里没有可参照的产物，只按前端消费契约自证
+（前端占位符正则 `/\{([^{}]+)\}/g`：凡它替换不了的形态都不许下发）。
+
+- **前导斜杠**：Spring 的 mapping 一律以 `/` 开头，而 Laravel 的 `Route::uri()` 不带前导斜杠。归一化时
+  去掉前导 `/` 与 Laravel 同形（`/admin/users/{user}` → `admin/users/{user}`），**例外**是根路径 `/`
+  保持 `/`（Laravel 的 `Route::get('/')` 的 uri 就是 `/`，去斜杠会得到空串）。摘要里层级端点的
+  `route.uri` 仍带前导斜杠——它来自 `endpoint_prefix` 的规范化，两者不是同一个值；
+- 参数名由本类自解析模板取得，且必须按**花括号深度**配对：`{id:\d{4}}` 里的 `{4}` 是量词，
+  按「第一个右花括号」切会把名字读成 `id:\d`；
+- **反斜杠转义必须整对吞掉**：实测 Spring 接受 `{code:[a-z\}]+}`（要匹配字面 `}` 必须转义），
+  不处理转义就会把 `\}` 当成占位段结束，名字切坏、尾巴掉进字面量；
+- 模板语法的可用边界由 Spring 自己界定（`SpringRoutingModelSpikeTest` 钉住）：
+  `{code:[a-z}]+}`（未转义的 `}`）、`{9lives}`（数字开头）、`{a+b}`（含 `+`）都会被
+  `PathPatternParser` 直接拒绝，即这类模板不可能来自 Spring；解析器对它们仍按「原样保留、不计参数」兜底，
+  防御非 Spring 来源的输入；
+- `{*path}` 这类前端填不了的占位段原样保留但**不进** `parameters`；裸 `**` 同理，SPEC 注明前端不可参数化；
+- 可选段：Spring 语法拒绝 `{name?}`，故可选性只能由 `@ForgeRoute(optional = {...})` 声明，
+  再由 `withOptional` 拼回 `{name?}`；声明的名字不在模板参数里 → 直接抛异常，不静默忽略。
 - 可选路径参数：`@ForgeRoute(optional = {"page"}, defaults = {"page=1"})` → 输出 `xxx/{page?}` +
   `parameter_defaults`。声明的名字不在 URI 模板内 → fail-fast。
 - 参数名来源是 URI 模板本身，不依赖 `-parameters`；`-parameters` 仍全仓强制（配置构造绑定需要）。
