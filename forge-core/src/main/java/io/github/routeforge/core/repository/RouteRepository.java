@@ -1,6 +1,5 @@
 package io.github.routeforge.core.repository;
 
-import io.github.routeforge.core.alias.AliasResolution;
 import io.github.routeforge.core.alias.AliasResolver;
 import io.github.routeforge.core.cache.RouteCache;
 import io.github.routeforge.core.config.LevelsConfig;

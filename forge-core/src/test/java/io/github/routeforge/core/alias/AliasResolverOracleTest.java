@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.github.routeforge.core.PhpFixtures;
-import io.github.routeforge.core.exception.AliasTargetException;
 import io.github.routeforge.core.exception.ForgeRuntimeException;
 import java.util.ArrayList;
 import java.util.List;

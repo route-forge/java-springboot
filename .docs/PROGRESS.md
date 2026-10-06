@@ -40,6 +40,18 @@
 
 > **P1 核心层到此收口**：forge-core 169 个测试全绿，其中 119 例直接对着 php-common@f3fa70d 的真实产物断言。
 
+- ✅ **P2-1 注解层** `@ForgeRoute`（组合注解，FW7 全部 9 个映射条件属性逐个 `@AliasFor`）+
+  `@Forge`（副注解）+ `@ForgeTier` + `ForgeTiers` 就近解析 + `RouteNamingStrategy` SPI；
+  starter 17 例全绿（含「与原生写法注册的 `RequestMappingInfo` 完全相等」的等价性断言）
+
+## 断言必须防"真空通过"
+
+两次教训同一类：① fixture 控制器没标 `@Controller` → Spring 一个映射都没注册 → 两个空 map 相等，
+最关键的等价性断言静默成立；② 改完生产代码没带 `--rerun-tasks`，读到的是上一轮结果。
+
+规则：任何「比对两边」的断言，先各加一条 `hasSize(N)` / `isNotEmpty()`；复验一律 `--rerun-tasks`；
+新落的断言集做一次变异检验（去掉一个别名、反一个覆盖方向、少注册一个映射）。
+
 ## 本阶段新发现的形态细节（照抄，不「顺手修正」）
 
 - **`--json` 顶层在目标层级为 0 时 PHP 输出 `[]`**：顶层没做 `(object)` 强转，只有每个层级块做了。

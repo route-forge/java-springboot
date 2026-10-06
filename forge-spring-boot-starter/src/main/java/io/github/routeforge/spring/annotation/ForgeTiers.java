@@ -2,9 +2,6 @@ package io.github.routeforge.spring.annotation;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.lang.Nullable;
 
 /**
@@ -56,14 +53,5 @@ public final class ForgeTiers {
         }
         // getDeclaredAnnotation：只认「标在这一层」的，不做继承，保证就近覆盖方向可控
         return element.getDeclaredAnnotation(ForgeTier.class);
-    }
-
-    /** 供测试与诊断使用的可见注解链（从方法往上到包）。 */
-    static Deque<AnnotatedElement> elementsOf(Method method) {
-        Deque<AnnotatedElement> chain = new ArrayDeque<>();
-        chain.add(method);
-        chain.add(method.getDeclaringClass());
-        chain.add(method.getDeclaringClass().getPackage());
-        return chain;
     }
 }
