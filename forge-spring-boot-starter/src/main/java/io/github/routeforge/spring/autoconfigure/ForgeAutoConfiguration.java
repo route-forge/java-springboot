@@ -122,7 +122,8 @@ public class ForgeAutoConfiguration {
                         properties.cacheTtl()),
                 cache,
                 classifier.getIfAvailable(),
-                warnings);
+                warnings,
+                properties.excludeUriPrefixes());
     }
 
     @Bean

@@ -67,7 +67,8 @@ class ForgeCliCommandTest {
         LevelsConfig levelsConfig = new LevelsConfig(levels());
         RepositoryConfig config = new RepositoryConfig(1, strict, "/_forge/routes", null, 3600);
         RouteCache cache = new RouteCache(new InMemoryCacheStore(), false, 3600);
-        return new ForgeRouteRegistry(source, levelsConfig, aliases, config, cache, null, WarningSink.NOOP);
+        return new ForgeRouteRegistry(source, levelsConfig, aliases, config, cache, null, WarningSink.NOOP,
+                List.of());
     }
 
     // -------------------------------------------------------------- list

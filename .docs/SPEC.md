@@ -84,11 +84,15 @@ Java 侧落地口径：
 | `forge.strict-mode` | `bool` | `false` | 严格模式 |
 | `forge.scheme-version` | `int` | `1` | 摘要格式版本 |
 | `forge.aliases` | `map<string,string>` | `{}` | 别名：键=别名，值=真实路由名 |
+| `forge.exclude-uri-prefixes` | `string[]` | `[]` | **追加**的 URI 维排除前缀（在内置 `/error`、`/actuator` 之外做加法），见 §4.5 |
 | `forge.manager.enabled` | `bool` | `false` | 管理器页面开关（Java 侧多一道显式开关） |
 | `forge.manager.allowed-ips` | `string[]` | `[127.0.0.1, ::1]` | IP 白名单，`*` 放行、空=不限制 |
 
 - 数组型配置**接受单值**（`forge.levels.admin.match.prefix=api/admin` 等价于单元素列表），与 PHP 侧归一口径一致。
 - `classifier` 在 Java 侧是 bean（`RouteClassifier`），不进配置文件，因而管理器可安全保存 PHP 侧禁存的场景在这里天然消失。
+- `forge.exclude-uri-prefixes` 是 **Java 专属扩展**：Laravel 靠路由名前缀（`storage.*`）排框架内部路由，Spring 侧
+  框架路由全未命名、无名字可匹，只能按 URI 段前缀排。宿主值是**追加**到内置默认集 `{/error, /actuator}`（并集，
+  默认集不可被清空），防止宿主配一个值就把 `/error` 的排除丢了、strict 又 500。详见 §4.5。
 
 ## 4. Spring 概念 → forge 语义映射
 
@@ -219,10 +223,26 @@ Spring 侧**没有「逐路由中间件」**，但有两条与 Laravel 等价的
   管理器条目（P5）。**层级端点的行字段集按 §2.2 是 `uri`/`methods`/`parameters`/`parameter_defaults` 四项，
   不含 `middleware`**——那是前端消费的契约字段集，不许为了后端自检而扩字段（由契约测试的整文断言钉住）。
 
-### 4.5 包自身路由排除 ⟨P2⟩
+### 4.5 包自身路由与框架内部路由的排除 ⟨P2/P3⟩
 
-`forge.manager.*` / 层级与摘要端点自身一律不进任何元信息，两个维度：按注册来源（本包 controller）+
-按规范化后的 `endpoint_prefix` 做 URI **段级**前缀排除。否则 `strict_mode=true` 时包会把自己的端点报成宿主的配置错误。
+`forge.manager.*` / 层级与摘要端点自身一律不进任何元信息。排除有**两个维度**，缺一都有真实自伤：
+
+- **按注册来源**：本包 controller（其路由名带 `forge.routes.` / `forge.manager.` 前缀，被名字维排除）；
+- **按规范化后的 `endpoint_prefix` 做 URI 段级前缀**：Spring 侧包自身端点全部未命名、无名字可判，
+  若宿主管该层级配了 `endpoint-middleware`，带中间件的 `GET {endpoint_prefix}/{level}` 会被 match 命中——
+  不按 URI 排除，`strict_mode=true` 时包会把自己的端点报成宿主的配置错误、端点必 500。
+
+URI 维还并入一批 **Boot 框架内部路由的默认排除集 `{/error, /actuator}`**（`BasicErrorController` 与 actuator
+基路径），段级匹配、未引对应依赖时空转无害。根因同「包自身端点」：这些路由也全未命名，宿主一旦把某层级
+`match.prefix` 写宽（`/` 或 `/api`），`/error`、`/actuator/**` 就整批落进 `missing_name`，把严格模式刷满 500，
+**且宿主无法靠给它们命名来自救**（CI 门禁被永久打断、报错指向框架路由、排查方向是错的）。
+
+Laravel 侧没这个维度可借——它靠路由名前缀 `storage.*` 排框架内部路由（`ForgeServiceProvider` 的
+`LARAVEL_INTERNAL_ROUTE_PREFIXES`），而 Spring 框架路由无名。故 URI 默认排除是 **Java 专属扩展**，宿主可经
+`forge.exclude-uri-prefixes` **追加**（并集语义，内置默认不可清空，见 §3）。**刻意不纳入** springdoc
+（`/v3/api-docs` 等）：第三方路径多变可配、变体众多（`swagger-ui/**`、`.yaml` 等），写进默认集是「假完备」，
+更应让宿主按需显式追加。**边界**：URI 维只作用于**未命名**路由；宿主显式命名的路由（哪怕 URI 恰好是 `/error`）
+不受影响——排除从不静默吞掉一个被有意命名的业务路由。
 
 ### 4.6 缓存层与装配生命周期
 

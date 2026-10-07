@@ -149,7 +149,7 @@
 
 重排后的 P3 = **对照参照查出的真实缺口**，四项按依赖排序。
 
-### P3-1 框架内部路由的第二维排除（唯一有生产风险的一条）
+### ✅ P3-1 框架内部路由的第二维排除（唯一有生产风险的一条）—— 已落地 2026-10-07
 
 Laravel 靠**路由名前缀**排除框架内部路由（`storage.*` 等，见 `ForgeServiceProvider.php:71-78, 228-245`）。
 Spring 侧这条路**根本不存在**：宿主不给 `@ForgeRoute(name=...)` 的路由全都是未命名，名字前缀无物可匹。
@@ -162,15 +162,19 @@ Spring 侧这条路**根本不存在**：宿主不给 `@ForgeRoute(name=...)` �
 就会整批落进 `missing_name`，把严格模式刷满 500——而宿主**没有任何办法**给它们命名来消掉。
 CI 门禁会被永久打断，且报错文案指向的是框架路由，排查方向是错的。
 
-做法：给 `RouteNameFilter` 的 URI 维度加**默认排除集**（至少 `/error`；`/actuator` 建议按
-classpath 探测可选生效），并允许宿主追加。需要拍板的点（开工前问）：
+**落地（两处拍板，用户 2026-10-07 定，均选 A）**：
+1. URI 维并入内置默认集 `{/error, /actuator}`（`ForgeRouteRegistry.FRAMEWORK_URI_EXCLUSIONS`，段级匹配，
+   未引依赖时空转无害）；**刻意不放 springdoc**（路径多变、变体众多，写进默认集是「假完备」）。
+2. 新增配置键 `forge.exclude-uri-prefixes`，宿主值是**追加**到内置默认（并集、默认不可清空——防宿主一个值
+   把 /error 丢了又 500）。URI 维只作用于**未命名**路由，显式命名的 `/error` 业务路由不受影响。
+   合并逻辑单点在 `ForgeRouteRegistry`（endpoint ∪ 内置 ∪ 宿主），命令行/严格扫描/仓库共用同一 filter。
+   SPEC §3 加了该键并标注为 Java 专属扩展、§4.5 展开根因与边界。
 
-1. 是否新增配置键 `forge.exclude-uri-prefixes`（`ForgeProperties` 现有 10 个组件里**没有**同类字段，
-   这是新键 → 要进 SPEC §3 并记为 Java 专属扩展，Laravel 无对等键）；
-2. 默认集里放哪些：`/error` 必放；`/actuator`、`/v3/api-docs` 放默认集还是留给宿主追加。
-
-验收：新增一个 `match.prefix: [/]` 宽层级的契约上下文，断言 `/error` 既不进元信息也不进 violations；
-删掉默认排除集时该断言必须红（变异检验）。
+验收：`ForgeUriExclusionTest` 走 `registry.analyze()` 断言未命名 `/error`、`/actuator/health` 被排除、
+`/v3/api-docs` 与段边界外的 `/errorlog` 仍在、宿主追加 `/v3/api-docs` 后一并排除、null/无斜杠形态宽容。
+**变异检验**：把内置默认清空 → 三条排除断言 + strict 违例断言当场变红（证明咬得住）。
+（注：用合成 `RouteInfo("/error")` 代替真实 `BasicErrorController` 路由——排除按 URI 字符串段级匹配，
+与来源无关，一条 RouteInfo 足以钉死口径，不为此再拉一组 Spring 上下文。）
 
 ### P3-2 「注解写在不会被消费的位置」的提示
 

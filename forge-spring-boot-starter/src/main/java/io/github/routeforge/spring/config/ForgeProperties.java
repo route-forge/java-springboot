@@ -1,6 +1,7 @@
 package io.github.routeforge.spring.config;
 
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param strictMode        严格模式
  * @param schemeVersion     摘要格式版本；未配置时回落 1
  * @param aliases           别名映射（键=别名，值=真实路由名）
+ * @param excludeUriPrefixes 追加的 URI 维排除前缀（在内置 {@code /error}、{@code /actuator} 之外做加法）
  * @param manager           管理器页面相关开关
  */
 @ConfigurationProperties(prefix = "forge")
@@ -40,6 +42,7 @@ public record ForgeProperties(
         Boolean strictMode,
         Integer schemeVersion,
         Map<String, Object> aliases,
+        List<String> excludeUriPrefixes,
         Manager manager) {
 
     /** 未显式配置时的契约默认端点前缀。 */
@@ -74,6 +77,11 @@ public record ForgeProperties(
         cacheDriver = cacheDriver == null || cacheDriver.isBlank() ? "memory" : cacheDriver;
         strictMode = strictMode != null && strictMode;
         aliases = aliases == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(aliases)); // 别名声明顺序进产物
+        // 用 unmodifiable+ArrayList 而非 List.copyOf：容忍宿主写出的畸形 null 元素（与 PHP 侧宽容一致），
+        // 交由注册表在合并阶段过滤空值，绑定期不 NPE。
+        excludeUriPrefixes = excludeUriPrefixes == null
+                ? List.of()
+                : Collections.unmodifiableList(new ArrayList<>(excludeUriPrefixes));
         manager = manager == null ? Manager.disabled() : manager;
     }
 

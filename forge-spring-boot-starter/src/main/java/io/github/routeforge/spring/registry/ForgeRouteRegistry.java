@@ -12,6 +12,7 @@ import io.github.routeforge.core.support.EndpointPrefix;
 import io.github.routeforge.core.tier.RouteClassifier;
 import io.github.routeforge.core.tier.TierResolver;
 import io.github.routeforge.core.support.WarningSink;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.springframework.lang.Nullable;
@@ -30,8 +31,24 @@ import org.springframework.lang.Nullable;
  * <p>包自身端点的排除在这里接线：过滤器同时拿到「路由名前缀」与「规范化后的 endpoint_prefix」两级，
  * 后者是必需的——层级端点本身是未命名路由，没有名字可判，若宿主又给该层级配了
  * {@code endpoint-middleware}，它会被该层级的 match 规则命中，包就会把自己报成宿主的配置错误。
+ *
+ * <p>URI 维还并入一批 <b>Boot 框架内部路由</b> 的默认前缀（{@link #FRAMEWORK_URI_EXCLUSIONS}）：
+ * Spring 侧的框架路由全未命名，宿主没法靠「名字前缀」排除它们（Laravel 靠 {@code storage.*} 那条路在这里不存在）。
+ * 宿主只要把某层级的 {@code match.prefix} 写宽（{@code /} 或 {@code /api}），{@code /error}、{@code /actuator/**}
+ * 就会整批落进 {@code missing_name} 把严格模式刷满 500，且宿主无法靠命名自救。故 URI 维 =
+ * endpoint ∪ 内置默认 ∪ 宿主 {@code forge.exclude-uri-prefixes}（后者只做加法，防止宿主一个值把 /error 丢了）。
  */
 public final class ForgeRouteRegistry {
+
+    /**
+     * Boot 框架内部路由的 URI 默认排除（段级前缀，未引对应依赖时空转无害）：
+     * {@code /error} = {@code BasicErrorController}；{@code /actuator} = actuator 端点基路径。
+     *
+     * <p>刻意<b>不</b>放 springdoc（{@code /v3/api-docs} 等）：第三方路径多变可配、变体众多，写进默认集是
+     * 「假完备」，留给宿主经 {@code forge.exclude-uri-prefixes} 追加。Laravel 无对等物（那边按名字前缀排），
+     * 属 Java 专属扩展（SPEC §3、§4.5）。
+     */
+    private static final List<String> FRAMEWORK_URI_EXCLUSIONS = List.of("/error", "/actuator");
 
     private final RouteSource source;
     private final LevelsConfig levels;
@@ -44,7 +61,8 @@ public final class ForgeRouteRegistry {
     private final WarningSink warnings;
 
     public ForgeRouteRegistry(RouteSource source, LevelsConfig levels, Map<String, Object> aliases,
-            RepositoryConfig config, RouteCache cache, @Nullable RouteClassifier classifier, WarningSink warnings) {
+            RepositoryConfig config, RouteCache cache, @Nullable RouteClassifier classifier, WarningSink warnings,
+            List<String> hostUriExclusions) {
         this.source = source;
         this.levels = levels;
         this.aliases = aliases;
@@ -52,8 +70,27 @@ public final class ForgeRouteRegistry {
         this.cache = cache;
         this.classifier = classifier;
         this.warnings = warnings;
-        this.filter = new RouteNameFilter()
-                .withUriPrefixes(List.of(EndpointPrefix.normalize(config.endpointPrefix())));
+        this.filter = new RouteNameFilter().withUriPrefixes(uriExclusions(config, hostUriExclusions));
+    }
+
+    /**
+     * URI 维排除集 = 规范化 endpoint 前缀 ∪ 内置框架默认 ∪ 宿主追加（各段规范化、跳空值）。
+     * 全部走 {@link EndpointPrefix#normalize}，交给 {@link RouteNameFilter} 做段级匹配（{@code /error}
+     * 不会误伤 {@code /errorlog}）。{@code withUriPrefixes} 内部按 {@code LinkedHashSet} 去重，重复无害。
+     */
+    private static List<String> uriExclusions(RepositoryConfig config, List<String> hostUriExclusions) {
+        List<String> out = new ArrayList<>();
+        String endpoint = config.endpointPrefix() == null
+                ? RouteRepository.DEFAULT_ENDPOINT_PREFIX
+                : config.endpointPrefix();
+        out.add(EndpointPrefix.normalize(endpoint));
+        FRAMEWORK_URI_EXCLUSIONS.forEach(prefix -> out.add(EndpointPrefix.normalize(prefix)));
+        if (hostUriExclusions != null) {
+            hostUriExclusions.stream()
+                    .filter(prefix -> prefix != null && !prefix.isBlank())
+                    .forEach(prefix -> out.add(EndpointPrefix.normalize(prefix.trim())));
+        }
+        return out;
     }
 
     /** 摘要端点产物。 */
