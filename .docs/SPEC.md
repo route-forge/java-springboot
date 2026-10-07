@@ -268,6 +268,30 @@ Laravel 侧没这个维度可借——它靠路由名前缀 `storage.*` 排框�
 `debug=true` 生效时启动日志打一条 WARN 横幅，明示「缓存已旁路，每个请求重扫路由表」，避免把它当成性能开关长期开着。
 
 
+### 4.8 注解误放提示（写在不会被消费位置的 forge 标记） ⟨P3⟩
+
+参照 Laravel 的 `ForgeRouteRegistrar::__destruct`（声明了属性却无消费方 → 记日志、**刻意不抛**）。Spring 侧的
+对应误用是：forge 标记落在**永远不会成为 handler** 的位置，于是静默失效——路由进不了任何端点、`--forge:list`、
+d.ts 或严格扫描，宿主却以为生效了。可检测的两类（高信噪比、近零误报）：
+
+- `@Forge` 标在一个**没有请求映射**的方法上（该方法永不成为 handler）；
+- `@ForgeRoute`（meta-`@RequestMapping`）标在一个 `@Component` 而非 `@Controller`/`@RestController` 的 bean 上
+  （类不是 handler，映射不生效）。
+
+机制：`HandlerMethodRouteSource` 只枚举**已注册** handler，结构上看不见「没成为 handler 的注解」，故本检查反向
+在 bean 定义层面做——`SmartInitializingSingleton` 启动后跑一次，拿全量已注册 handler 的方法签名集，再看每个 bean
+**本类局部声明**的、带 `@Forge`/`@ForgeRoute` 的方法是否落在集外；集外者经 `WarningSink` 出一条提示。**绝不抛异常**。
+
+边界与取舍（按用户 2026-10-07 拍板，均选 A）：
+
+- **只在 `debug=true` 或 `strict=true` 时启用**（排查配置问题的两个场景），生产两者皆非则 bean 存在但直接返回、零反射；
+- **severity 恒为 `warning`**——不给 `WarningSink` 扩 error 通道。这类位置本就进不了 forge 产物，无法成为可 catch 的
+  strict error；与 Laravel 的 strict→error / 否则 warning 分级是本处**有意差异**，据此保持 §4.4「`WarningSink` 无条件接、
+  要静音由宿主覆盖该 bean」的既有口径。
+- **刻意不纳入**：`@ForgeTier` 的类/包级误放（继承、`package-info`、懒加载下误报面大）；完全没被任何 stereotype
+  纳入容器的类（连 bean 都不是——那要 classpath 扫描，代价与误报都不可接受）。
+
+
 ## 5. 工具链
 
 ### 5.1 CLI（`ApplicationRunner` 参数式） ⟨P4⟩

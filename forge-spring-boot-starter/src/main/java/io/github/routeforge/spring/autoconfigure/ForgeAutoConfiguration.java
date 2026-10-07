@@ -16,12 +16,14 @@ import io.github.routeforge.spring.cli.ForgeTypesCommand;
 import io.github.routeforge.spring.config.ForgeProperties;
 import io.github.routeforge.spring.naming.RouteNamingStrategy;
 import io.github.routeforge.spring.registry.ForgeRouteRegistry;
+import io.github.routeforge.spring.scan.ForgeAnnotationSanityChecker;
 import io.github.routeforge.spring.scan.HandlerMethodRouteSource;
 import io.github.routeforge.spring.support.Slf4jWarningSink;
 import io.github.routeforge.spring.web.ForgeRoutesController;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -166,6 +168,23 @@ public class ForgeAutoConfiguration {
     @ConditionalOnMissingBean
     ForgeCliRunner forgeCliRunner(ForgeListCommand list, ForgeTypesCommand types, ForgeClearCommand clear) {
         return new ForgeCliRunner(list, types, clear);
+    }
+
+    /**
+     * 「注解写在不会被消费位置」的一次性启动扫描（SPEC §4.1 / §4.5 的误用面，参照 Laravel 的
+     * {@code ForgeRouteRegistrar::__destruct}「记日志不抛」）。
+     *
+     * <p>只在 {@code debug=true} 或 {@code strict=true} 时启用——排查配置问题的两个场景；生产两者皆非则
+     * bean 存在但 {@code afterSingletonsInstantiated} 直接返回，零反射。提示恒为 warning（{@link WarningSink}
+     * 无条件接，要静音由宿主覆盖该 bean），绝不抛。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    ForgeAnnotationSanityChecker forgeAnnotationSanityChecker(ObjectProvider<RequestMappingHandlerMapping> mappings,
+            ListableBeanFactory beanFactory, WarningSink warnings, ForgeProperties properties,
+            Environment environment) {
+        boolean enabled = isDebug(environment) || properties.strictMode();
+        return new ForgeAnnotationSanityChecker(mappings.orderedStream().toList(), beanFactory, warnings, enabled);
     }
 
     /**

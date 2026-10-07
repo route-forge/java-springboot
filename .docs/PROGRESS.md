@@ -176,15 +176,25 @@ CI 门禁会被永久打断，且报错文案指向的是框架路由，排查�
 （注：用合成 `RouteInfo("/error")` 代替真实 `BasicErrorController` 路由——排除按 URI 字符串段级匹配，
 与来源无关，一条 RouteInfo 足以钉死口径，不为此再拉一组 Spring 上下文。）
 
-### P3-2 「注解写在不会被消费的位置」的提示
+### ✅ P3-2 「注解写在不会被消费的位置」的提示 —— 已落地 2026-10-07
 
 参照物是 `ForgeRouteRegistrar::__destruct`（`php-laravel:138-165`）：组属性挂在 Registrar 上却从未被消费
 → strict 下 error、否则 warning，**刻意不抛**（析构期抛异常致命）。
 
 Java 侧的对应场景确实存在，而且本仓已踩过其中两个：`@Forge` 标在没有映射注解的方法上（永不成为 handler）、
-`@ForgeTier` 标在不含任何 handler 的类或包上、`@ForgeRoute` 标在漏了 `@Controller`/`@RestController` 的类上
-（「断言必须防真空通过」第 ① 次教训就是这个）。做法：装配后比对 bean 定义做一次扫描，经 `WarningSink` 出提示，
-不抛异常。需要拍板：扫 bean 的误报面与启动成本是否可接受（我倾向只在 `debug=true` 或 strict 下扫一次）。
+`@ForgeRoute` 标在漏了 `@Controller`/`@RestController` 的类上（「断言必须防真空通过」第 ① 次教训就是这个）。
+
+**落地（两处拍板，用户 2026-10-07 定，均选 A）**：新增 `ForgeAnnotationSanityChecker`（`SmartInitializingSingleton`，
+装配后跑一次，比对已注册 handler 签名集，把带 `@Forge`/`@ForgeRoute` 却没成为 handler 的本类局部方法经 `WarningSink`
+出提示，绝不抛）。① 触发：只在 `debug=true` 或 `strict=true` 时启用（生产两者皆非 bean 直接返回、零反射）；
+② severity：恒 warning，不给 WarningSink 扩 error 通道（Laravel 的 strict→error 分级记为有意差异）。
+**刻意收窄**：`@ForgeTier` 类/包级误放（继承/package-info/懒加载误报面大）、以及完全没进容器的类（需 classpath 扫）
+都不做——只留近零误报的两类。SPEC §4.8 展开。
+
+验收：`ForgeAnnotationSanityTest`（自建 web 上下文 + 录音 WarningSink，`@Import` 三条被测类）端到端验证：
+debug 上下文报出「非 controller 的 @ForgeRoute」与「无映射的 @Forge」两类、合法映射不误报；默认上下文（debug/strict 皆非）
+不出任何该提示。**变异检验**：把 autoconfig 的 `enabled` 改成恒 true → 「默认上下文不扫」那条当场变红（证明 debug‖strict
+门禁真被钉住）。测试踩点：断言谓词按整句 grep 时，中文措辞差一个「的」就静默不匹配——已对齐为子串「不会被消费的位置」。
 
 ### P3-3 时机差异记账（纯文档，别写成代码）
 
