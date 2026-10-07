@@ -132,11 +132,15 @@
   **前置修正**：PROGRESS 原记「给 registry 补 `allRoutesWithTiers()` 转发」不准——list/types 吃的是 `analyze()`
   （`allRoutesWithTiers()` 是 P5 管理器的数据源，本次未动、留给 P5）；本次给 registry 补的是
   `analyze()`/`levelNames()`/`normalizedEndpointPrefix()`/`clearAllCache()`/`clearLevelCache()` 五个口。
+- ✅ **P3 重排的四项真实缺口全部收口**（详见「P3 重排」小节）：P3-1 URI 维默认排除 `{/error,/actuator}` +
+  追加键 `forge.exclude-uri-prefixes`（`c47459d`）；P3-2 注解误放提示 `ForgeAnnotationSanityChecker`
+  （`500f681`）；P3-3 时机对照写进 SPEC §4.9；P3-4 钉 strict×缓存×debug 的 HTTP 面（三组上下文各加一条）。
+  两条变异检验：清空内置默认 / 把误放扫描 `enabled` 改恒 true，均被对应断言当场抓红。
 - ⏳ **P5** 管理器页面 + IP 白名单 + `forge-levels.yml` 写回（保存后必须失效缓存）、Redis 缓存驱动、
   Thymeleaf 内嵌摘要、「classpath 无 Security」启动 WARN、`allRoutesWithTiers()` 转发接进管理器端点
 - ⏳ **P6** 示例后端 + Vue/React 双前端 pnpm 联调 + 真实 Laravel HTTP golden 端到端对等 + maven-publish/signing
 
-## P3 重排（2026-10-07，对着 `G:\web\php-laravel` 参照逐条核过）
+## P3 重排（2026-10-07，对着 `G:\web\php-laravel` 参照逐条核过）—— ✅ P3-1..P3-4 全部收口
 
 **先记账：原 P3 的四项已被前面几个阶段吸收，不要再当待办做**（旧 ⏳ P3 行已删）。
 
@@ -196,7 +200,7 @@ debug 上下文报出「非 controller 的 @ForgeRoute」与「无映射的 @For
 不出任何该提示。**变异检验**：把 autoconfig 的 `enabled` 改成恒 true → 「默认上下文不扫」那条当场变红（证明 debug‖strict
 门禁真被钉住）。测试踩点：断言谓词按整句 grep 时，中文措辞差一个「的」就静默不匹配——已对齐为子串「不会被消费的位置」。
 
-### P3-3 时机差异记账（纯文档，别写成代码）
+### ✅ P3-3 时机差异记账（纯文档）—— 已落地 2026-10-07（写进 SPEC §4.9）
 
 对照后要认下来的三条等价、一条差异，写进 SPEC 免得下个会话当缺口重做：
 
@@ -206,16 +210,24 @@ debug 上下文报出「非 controller 的 @ForgeRoute」与「无映射的 @For
 - **悬空别名 / 别名撞车 / 同名跨层级重复**：PHP 全部延迟到扫描期（`AliasResolver.php:109-116, 146-154`、
   `RouteAnalyzer.php:177-190`），撞车时真实路由赢、别名丢弃并 warning——Java 已同形（核心层移植自同一份代码）；
 - **PHP 没有任何启动期预热扫描**。Java 若为了"更早报错"加启动期扫一遍，会连带把 strict 聚合提前到启动期，
-  宿主行为就从"请求 500"变成"启不来"——**不要做**；
-- 唯一 Java 多出来的时机面：`GuardLabels` 的显式/派生不一致提示是无条件经 `WarningSink`（SPEC §4.4 已记）。
+  宿主行为就从"请求 500"变成"启不来"——**不要做**；§4.8 的误放扫描是安全例外（只出 warning、绝不抛、不参与
+  也不提前 RF_BE_009 判定）；
+- 唯一 Java 多出来的时机面：`GuardLabels` 的显式/派生不一致提示是无条件经 `WarningSink`（SPEC §4.4 已记），
+  加 §4.8 误放提示。另补一条 Spring 口径差：`strict-mode` 启动期绑定、单 JVM 内不可运行时翻转（见 P3-4）。
 
-### P3-4 strict × 缓存 × debug 三件套的 HTTP 面断言
+### ✅ P3-4 strict × 缓存 × debug 三件套的 HTTP 面断言 —— 已落地 2026-10-07
 
 PHP 侧这四条是一个组合：缓存命中跳过预扫描（`RouteRepository.php:108-111, 181-184`）、违规**永不**入缓存
 （`cache->set` 在扫描之后，:158/:239）、`debug` 整体旁路缓存、两个端点同口径。Java 结构上已满足
-（`RouteRepository:83-85, 113-115` 命中即 return；`infos()` 先抛后 `cache.set`），**但契约测试一条都没钉**。
-补一组就够：strict 下先 500 → 关 strict 取到 200 → 再开 strict 仍 500（证明违规没被缓存"洗白"）；
-外加 `debug=true` 时每请求重扫的探针（可以用 P3-2 的 warning 计数，或 `GuardLabels` 不一致提示的条数）。
+（`RouteRepository:83-85, 113-115` 命中即 return；`infos()` 先抛后 `cache.set`）。
+
+**Spring 模型下的口径差（重要，别照 PHP 抄翻转测试）**：PROGRESS 原计划的「strict 500 → 关 strict 200 →
+再开 strict 仍 500」翻转，在 Spring 一个 @SpringBootTest 上下文里**结构上不可能**——strict 是启动期绑定的属性，
+不能运行时翻转。故据等价事实钉三条（`ForgeEndpointsContractTest` 三组上下文各加一条）：
+① strict 无 debug：连取两次 admin 均 500 且 `cache.get("admin")` 为 null（违规路径从不 cache.set，不会被缓存命中
+跳过预扫描而"洗白"）；② 非 debug 上下文 `cache.disabled()==false`（缓存生效）；③ debug=true 上下文
+`cache.disabled()==true`（整体旁路、每请求重扫）。缓存的读写旁路与 `forgetLevel` 连带失效由核心层 `RouteCacheTest`
+已钉，这里补的是装配/HTTP 面这一环。
 
 ### 给 P4 记下的参照事实（现在不动手，照抄时最容易弄反）
 

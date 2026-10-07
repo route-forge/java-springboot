@@ -292,6 +292,27 @@ d.ts 或严格扫描，宿主却以为生效了。可检测的两类（高信噪
   纳入容器的类（连 bean 都不是——那要 classpath 扫描，代价与误报都不可接受）。
 
 
+### 4.9 生命周期时机对照（与 PHP）⟨P3⟩
+
+记下来免得下个会话当缺口重做。四条里三条与 PHP **等价**、一条**刻意不做**，另有一条 Java 多出的时机面，再加一条
+Spring 模型带来的口径差：
+
+- **层级名合法性（`RF_BE_002` vs PHP `UnknownLevelException`）**：PHP 在三个定义入口（宏 / Registrar /
+  `updateGroupStack`）即查 `config('forge.levels')` 抛；Java 在 `TierResolver` 抛 `RF_BE_002`。Laravel 的路由文件
+  每次请求都要重新注册，所以两侧都是「同一次请求内、响应之前」——**形态等价**，不需要提前到启动期。
+- **悬空别名 / 别名撞车 / 同名跨层级重复**：PHP 全部延迟到扫描期（`AliasResolver`、`RouteAnalyzer`），撞车时真实路由赢、
+  别名丢弃并 warning——Java 已同形（核心层移植自同一份代码）。
+- **不做启动期预热扫描**：PHP 没有任何启动期全表扫描。Java 若为了「更早报错」在启动期扫一遍，会连带把 strict 聚合
+  提前到启动期，宿主行为从「请求 500」变成「启不来」——**不要做**。§4.8 的误放扫描是**安全的例外**：它只经
+  `WarningSink` 出提示、绝不抛，既不参与也不提前 `RF_BE_009` 的判定，故不触碰这条禁令。
+- **Java 多出的时机面**：`GuardLabels` 的显式/派生不一致提示无条件经 `WarningSink`（§4.4 已记），以及 §4.8 的误放
+  提示（`debug` 或 `strict` 时启动扫一次）。
+- **Spring 的 fixed-strict 现实（口径差，非缺口）**：`strict-mode` 是启动期绑定的属性，单个 JVM 内不可运行时翻转；
+  因此 PHP 那句「strict 下 500 → 关 strict 取 200 → 再开 strict 仍 500」的翻转测试，在 Spring 的一个上下文里
+  **结构上不可能发生**。契约测试据此钉的是**等价事实**：strict 取数路径从不落缓存（每请求恒 500，不会因缓存命中
+  跳过预扫描而被「洗白」）、`debug=true` 整体旁路缓存（缓存 bean 报 `disabled`）、两个端点同口径。
+
+
 ## 5. 工具链
 
 ### 5.1 CLI（`ApplicationRunner` 参数式） ⟨P4⟩
