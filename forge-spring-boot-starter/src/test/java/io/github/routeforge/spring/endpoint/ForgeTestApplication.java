@@ -2,6 +2,7 @@ package io.github.routeforge.spring.endpoint;
 
 import io.github.routeforge.spring.annotation.ForgeRoute;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -10,7 +11,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 /**
  * 端点契约测试用的最小宿主应用。
  *
- * <p>刻意只放三条路由，每条都对应一个会被断言检查的行为：
+ * <p>刻意只放少数几条路由，每条都对应一个会被断言检查的行为：
  * <ul>
  *   <li>{@code admin.users.index} —— 显式 tier 的命名路由，进层级端点与摘要计数；</li>
  *   <li>{@code client.orders.list} —— 走 {@code path} 别名透传，验证 URI 模板原样下发；</li>
@@ -40,6 +41,25 @@ public class ForgeTestApplication {
                 tier = "client")
         @ResponseBody
         public String list() {
+            return "";
+        }
+    }
+
+    /**
+     * 守卫注解放<b>在类上</b>：这是第四通道最容易漏的一种形态——注解不在 handler 方法元素上，
+     * 而在 bean 类型上（{@code MergedAnnotations} 只看方法读不到声明类的注解，实测踩过）。
+     *
+     * <p>它存在的意义是「派生标签不污染前端契约字段集」：层级端点的行只有四项（SPEC §2.2），
+     * {@code middleware} 只能出现在 CLI 与管理器产物里。标签内容本身由
+     * {@code GuardLabelsTest} / {@code HandlerMethodRouteSourceTest} 逐条钉。
+     */
+    @PreAuthorize("hasRole('AUDIT')")
+    @Controller
+    static class AuditController {
+
+        @ForgeRoute(name = "audit.login.index", path = "/audit/login", method = RequestMethod.GET, tier = "audit")
+        @ResponseBody
+        public String index() {
             return "";
         }
     }

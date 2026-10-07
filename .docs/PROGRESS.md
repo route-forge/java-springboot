@@ -59,6 +59,11 @@
 - ⚠️ 同一次提交携带了另一会话的 §4.4 守卫标签派生（`GuardLabels` + 其测试、`HandlerMethodRouteSource`
   的 `middlewareOf`、catalog 的 `spring-security-core`/`jakarta-annotation-api`、SPEC §4.4 全文）——
   编译耦合（来源类调用派生器、装配又用其构造器），无法拆成两笔独立可编译的提交
+- ✅ **守卫标签第四通道**（即上条 ⚠️ 携带的那部分，现补齐端到端）`GuardLabels`：按注解**类型全名**识别
+  （main 侧零 Security 依赖）、`hasRole`/`hasAuthority` 取字面值不归一前缀、顶层 `and` 拆、或语义与认不全的
+  整条 `expression:` 兜底；`middlewareOf` 接线（显式优先，不一致只经 `WarningSink` 提示）。
+  17 例规则表 + 3 例接线 + 1 例端点契约。实测推翻的直觉：`MergedAnnotations` 的 `TYPE_HIERARCHY`
+  作用在 Method 元素上**读不到声明类的注解**，类级守卫全靠 `derive` 的第二轮（bean 类型）——已由专测钉住。
 
 ## 两条被实测推翻的前提（P2-3）
 
@@ -115,7 +120,8 @@
 - **emoji 的代理对不能直接喂 `%x`**：`String.format("%04x", Character)` 抛 IllegalFormatConversionException，
   必须显式转 int——这条是被对等测试当场抓到的，纯 Java 单测写不出来。
 
-- ⏳ **P4** CLI 三命令（`--forge:list` / `--forge:types` / `--forge:clear`：退出码、红色清单、违规不产出产物、
+- ⏳ **P4** CLI 三命令（开工前需给 `ForgeRouteRegistry` 补一个 `allRoutesWithTiers()` 转发——`--forge:list`
+  要看的 `middleware` 列在 `RouteRepository` 里已有，registry 目前只透 `summary()`/`routesForLevel()`）（`--forge:list` / `--forge:types` / `--forge:clear`：退出码、红色清单、违规不产出产物、
   走注册表而不是自己再扫一遍）
 - ⏳ **P5** 管理器页面 + IP 白名单 + `forge-levels.yml` 写回（保存后必须失效缓存）、Redis 缓存驱动、
   Thymeleaf 内嵌摘要、「classpath 无 Security」启动 WARN

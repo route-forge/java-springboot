@@ -64,6 +64,8 @@ class ForgeEndpointsContractTest {
                     "route":{"uri":"/_forge/routes/client","methods":["GET","HEAD"]}},\
                     "manage":{"description":"运营接口","load":"lazy","route_count":1,\
                     "route":{"uri":"/_forge/routes/manage","methods":["GET","HEAD"]}},\
+                    "audit":{"description":"审计接口","load":"lazy","route_count":1,\
+                    "route":{"uri":"/_forge/routes/audit","methods":["GET","HEAD"]}},\
                     "unassigned":{"description":"未命中任何层级的路由","load":"lazy","route_count":0,\
                     "route":{"uri":"/_forge/routes/unassigned","methods":["GET","HEAD"]}}},\
                     "config":{"strict_mode":false,"endpoint_prefix":"/_forge/routes",\
@@ -92,6 +94,20 @@ class ForgeEndpointsContractTest {
         void unnamedRoutesAreAbsent() throws Exception {
             assertThat(body("/_forge/routes/unassigned", 200)).isEqualTo("""
                     {"level":"unassigned","routes":{}}""");
+        }
+
+        @Test
+        @DisplayName("类上写守卫的路由：派生标签不得混进前端契约，层级端点行仍是四项")
+        void guardDerivedLabelsStayOutOfFrontendContract() throws Exception {
+            // audit.login.index 带 @PreAuthorize("hasRole('AUDIT')")，派生标签只在 CLI 与管理器产物里可见
+            String body = body("/_forge/routes/audit", 200);
+
+            assertThat(body).isEqualTo("""
+                    {"level":"audit","routes":{"audit.login.index":{"uri":"/audit/login",\
+                    "methods":["GET","HEAD"],"parameters":[],"parameter_defaults":{}}}}""");
+            assertThat(body)
+                    .as("§2.2 的字段集不许为后端自检扩列，否则前端拿到的形状就变了")
+                    .doesNotContain("middleware").doesNotContain("AUDIT");
         }
 
         @Test

@@ -110,7 +110,11 @@ public final class HandlerMethodRouteSource implements RouteSource {
      * 标签：显式声明优先，没声明才用守卫注解派生的结果（SPEC §4.4 铁律 2「不要求重复声明」）。
      *
      * <p>两者都在场且不一致时<b>不报错</b>——守卫可以有很多名字，对不上是常态——只经 {@link WarningSink}
-     * 出一条提示；接不接这个 sink 由装配层按 {@code strict-mode} 决定，所以这里无条件上报。
+     * 出一条提示。装配层是<b>无条件</b>接上 sink 的（{@code ForgeAutoConfiguration} 里用
+     * {@code @ConditionalOnMissingBean} 给 {@code Slf4jWarningSink}），不按 strict-mode 收口：那个 sink
+     * 被严格模式扫描等多处共用，一刀切关掉会连带别的告警一起哑掉；要静音由宿主自己注册 {@code WarningSink} bean 覆盖。
+     *
+     * <p>提示频率等于真正扫描的频率，即缓存 miss；{@code debug=true} 旁路缓存时会退化成每请求一条。
      */
     private List<String> middlewareOf(ForgeDeclaration declared, HandlerMethod handlerMethod) {
         List<String> derived = GuardLabels.derive(handlerMethod);

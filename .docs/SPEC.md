@@ -211,8 +211,13 @@ Spring 侧**没有「逐路由中间件」**，但有两条与 Laravel 等价的
 - **不校验 method security 是否真被启用**（`@EnableMethodSecurity` 及其 `securedEnabled` /
   `jsr250Enabled` 开关）：宿主把注解写成装饰物时，派生标签会跟着装饰它。这是标签只做归类的直接后果，
   也是第 1 条铁律存在的原因。
-- 显式通道与派生结果**不一致时不报错**（守卫可以有很多个名字，撞不上是常态），只在严格模式下经
-  `WarningSink` 出一条提示；`--forge:list` 与 `/api/routes` 的 `middleware` 字段照旧是最终采用的标签集。
+- 显式通道与派生结果**不一致时不报错**（守卫可以有很多个名字，撞不上是常态），只经 `WarningSink` 出一条提示。
+  装配层是无条件接 sink 的（不按 `strict-mode` 收口——那个 sink 被严格模式扫描等多处共用，一刀切关掉会
+  连带别的告警一起哑掉），要静音由宿主覆盖 `WarningSink` bean；提示频率＝真正扫描频率（缓存 miss），
+  `debug=true` 旁路缓存时退化成每请求一条。
+- 标签集合的**可见面**只有两处：`--forge:list`（P4，走 `RouteRepository.allRoutesWithTiers()`）与
+  管理器条目（P5）。**层级端点的行字段集按 §2.2 是 `uri`/`methods`/`parameters`/`parameter_defaults` 四项，
+  不含 `middleware`**——那是前端消费的契约字段集，不许为了后端自检而扩字段（由契约测试的整文断言钉住）。
 
 ### 4.5 包自身路由排除 ⟨P2⟩
 

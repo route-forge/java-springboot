@@ -17,3 +17,9 @@ forge:
       match:
         prefix:
           - /manage
+    # 只给「守卫注解派生标签」这一条用例用：单独一层，产物整文不受其它层级顺序影响
+    audit:
+      description: 审计接口
+      match:
+        prefix:
+          - /audit
