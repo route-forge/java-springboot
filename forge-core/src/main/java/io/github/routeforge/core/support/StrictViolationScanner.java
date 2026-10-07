@@ -6,7 +6,9 @@ import io.github.routeforge.core.tier.TierProbe;
 import io.github.routeforge.core.tier.TierResolver;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 严格模式违规扫描：一次遍历把「本该进入 forge 元信息却进不去」的路由分成三类收集，
@@ -66,6 +68,40 @@ public final class StrictViolationScanner {
 
         public boolean isEmpty() {
             return count() == 0;
+        }
+
+        /**
+         * 契约产物形态：三组键名与每组条目字段名都与 PHP 侧逐字对齐（snake_case）。
+         *
+         * <p>错误体里的 {@code error.violations} 与管理器/命令行的机器可读输出共用本方法——
+         * 同一条映射规则不许在适配层和测试里各写一遍，否则三处口径迟早分叉。
+         */
+        public Map<String, Object> toWireMap() {
+            Map<String, Object> wire = new LinkedHashMap<>();
+            wire.put("missing_name", missingName.stream().map(entry -> {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("uri", entry.uri());
+                row.put("methods", entry.methods());
+                row.put("level", entry.level());
+                row.put("source", entry.source());
+                return row;
+            }).toList());
+            wire.put("unassigned", unassigned.stream().map(entry -> {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("name", entry.name());
+                row.put("uri", entry.uri());
+                row.put("methods", entry.methods());
+                row.put("middleware", entry.middleware());
+                return row;
+            }).toList());
+            wire.put("unresolved", unresolved.stream().map(entry -> {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("name", entry.name());
+                row.put("uri", entry.uri());
+                row.put("reason", entry.reason());
+                return row;
+            }).toList());
+            return wire;
         }
 
         /** 人读清单（HTTP 错误 message 与命令行红色清单同源同措辞，不各写一份）。 */

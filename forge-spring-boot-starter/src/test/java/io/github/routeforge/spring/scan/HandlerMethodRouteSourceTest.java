@@ -10,9 +10,11 @@ import io.github.routeforge.spring.annotation.Forge;
 import io.github.routeforge.spring.annotation.ForgeRoute;
 import io.github.routeforge.spring.annotation.ForgeTier;
 import io.github.routeforge.spring.naming.RouteNamingStrategy;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -223,6 +225,62 @@ class HandlerMethodRouteSourceTest {
         assertThat(new HandlerMethodRouteSource(mappingOf(UnnamedController.class)).routes())
                 .singleElement()
                 .satisfies(route -> assertThat(route.name()).isNull());
+    }
+
+    /**
+     * 守卫注解派生标签的接线夹具：只验「标签落到 {@code RouteInfo} + 显式优先」，
+     * 派生规则本身逐行钉在 {@link GuardLabelsTest}。
+     */
+    @Controller
+    static class GuardAnnotatedController {
+
+        @GetMapping(path = "/guard/derived", name = "guard.derived")
+        @PreAuthorize("hasRole('ADMIN')")
+        public String derived() {
+            return "";
+        }
+
+        @GetMapping(path = "/guard/explicit", name = "guard.explicit")
+        @Forge(middleware = "legacy-tag")
+        @PreAuthorize("hasRole('ADMIN')")
+        public String explicitWins() {
+            return "";
+        }
+
+        @GetMapping(path = "/guard/plain", name = "guard.plain")
+        public String noGuard() {
+            return "";
+        }
+    }
+
+    @Test
+    @DisplayName("守卫注解派生的标签直接落到 middleware，宿主不必把同一件事抄第二遍（SPEC §4.4 铁律 2）")
+    void guardAnnotationsFillMiddlewareLabels() {
+        assertThat(routeFor(GuardAnnotatedController.class, "/guard/derived").middleware())
+                .containsExactly("ADMIN");
+    }
+
+    @Test
+    @DisplayName("没写守卫也没写 middleware 的路由保持空数组，派生通道不给老宿主凭空加字段")
+    void routesWithoutAnyGuardStayEmpty() {
+        assertThat(routeFor(GuardAnnotatedController.class, "/guard/plain").middleware()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("显式声明优先于派生；不一致时经 WarningSink 出一条提示而非判错")
+    void explicitDeclarationWinsAndWarns() {
+        List<String> collected = new ArrayList<>();
+        List<RouteInfo> routes = new HandlerMethodRouteSource(
+                List.of(mappingOf(GuardAnnotatedController.class)), null, collected::add).routes();
+
+        assertThat(routes).filteredOn(route -> "/guard/explicit".equals(route.uri()))
+                .singleElement()
+                .satisfies(route -> assertThat(route.middleware()).containsExactly("legacy-tag"));
+        assertThat(collected).singleElement().satisfies(message -> {
+            assertThat(message).contains("legacy-tag").contains("ADMIN").contains("不一致");
+            // 默认 sink 之外不该有别的出口：这条提示只说明两处的名字对不上，判定仍以显式声明为准
+            assertThat(message).contains("已采用显式声明");
+        });
     }
 
     /** 只放多路径与无路径条件两个方法：单独验展开与跳过，不受其它夹具的抛异常影响。 */

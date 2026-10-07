@@ -21,14 +21,21 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
 slf4j-api = { module = "org.slf4j:slf4j-api" }
 
 # --- 可选能力：classpath 上有则启用，无则降级 ---
-spring-security-config = { module = "org.springframework.security:spring-security-config" }
-spring-security-web = { module = "org.springframework.security:spring-security-web" }
 spring-data-redis = { module = "org.springframework.data:spring-data-redis" }
 # 管理器写回 forge-levels.yml 用；Boot 应用本身已带同一版本，实际不增加传递负担
 snakeyaml = { module = "org.yaml:snakeyaml" }
 
 # --- 测试 ---
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+# Boot 4 把按技术栈拆分的测试自动配置拆成了独立模块：@AutoConfigureMockMvc 在
+# org.springframework.boot.webmvc.test.autoconfigure（artifact: spring-boot-webmvc-test），
+# starter-test 不再自带——端点契约测试必须要它，否则只能起真端口跑集成测试。
+spring-boot-webmvc-test = { module = "org.springframework.boot:spring-boot-webmvc-test" }
+# 守卫标签派生（SPEC §4.4）的断言必须对着真实注解跑，而不是自造同名替身：
+# @PreAuthorize / @Secured 在 spring-security-core，@RolesAllowed / @PermitAll / @DenyAll 在 jakarta.annotation-api。
+# 只进 test 路径——适配层按**注解类型全名**反射识别，main 侧一颗 Security 依赖都不引。
+spring-security-core = { module = "org.springframework.security:spring-security-core" }
+jakarta-annotation-api = { module = "jakarta.annotation:jakarta.annotation-api" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 assertj-core = { module = "org.assertj:assertj-core" }

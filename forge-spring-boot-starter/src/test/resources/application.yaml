@@ -1,0 +1,19 @@
+# 端点契约测试的宿主配置（层级键按 Spring 形态写：前缀带前导斜杠）
+forge:
+  levels:
+    admin:
+      description: 系统管理接口
+      load: lazy
+      match:
+        prefix:
+          - /admin
+    client:
+      description: 客户端接口
+      load: eager
+      match:
+        prefix: /client
+    manage:
+      description: 运营接口
+      match:
+        prefix:
+          - /manage

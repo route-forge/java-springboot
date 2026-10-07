@@ -51,7 +51,8 @@ class StrictViolationScannerOracleTest {
 
         var violations = scanner.scan(PhpFixtures.toRoutes(input.get("infos")));
 
-        assertThat(toWire(violations)).isEqualTo(PhpFixtures.toObject(expected.get("violations")));
+        assertThat(normalizeClassNames(violations.toWireMap()))
+                .isEqualTo(PhpFixtures.toObject(expected.get("violations")));
         assertThat(violations.count()).isEqualTo(expected.get("count").asInt());
         assertThat(violations.format().stream().map(StrictViolationScannerOracleTest::parity).toList())
                 .isEqualTo(texts(expected.get("lines")));
@@ -65,33 +66,23 @@ class StrictViolationScannerOracleTest {
                 .isEqualTo(violations.count());
     }
 
-    /** Java 记录 → 与 PHP 侧完全同构的 Map（键名 snake_case、顺序一致），供逐字段比对。 */
-    private static Map<String, Object> toWire(StrictViolationScanner.Violations violations) {
-        Map<String, Object> wire = new LinkedHashMap<>();
-        wire.put("missing_name", violations.missingName().stream().map(entry -> {
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("uri", entry.uri());
-            row.put("methods", entry.methods());
-            row.put("level", entry.level());
-            row.put("source", entry.source());
-            return row;
-        }).toList());
-        wire.put("unassigned", violations.unassigned().stream().map(entry -> {
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("name", entry.name());
-            row.put("uri", entry.uri());
-            row.put("methods", entry.methods());
-            row.put("middleware", entry.middleware());
-            return row;
-        }).toList());
-        wire.put("unresolved", violations.unresolved().stream().map(entry -> {
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("name", entry.name());
-            row.put("uri", entry.uri());
-            row.put("reason", parity(entry.reason()));
-            return row;
-        }).toList());
-        return wire;
+
+    /**
+     * 深度复制一份 wire 结构，把所有字符串里的 Java 包名前缀去掉。
+     *
+     * <p>为什么在测试里做而不在 {@code toWireMap()} 里做：类名不同是<b>语言</b>造成的，
+     * 生产代码不该为一个跨语言比对细节改变自己的产物。
+     */
+    private static Object normalizeClassNames(Object node) {
+        if (node instanceof Map<?, ?> map) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            map.forEach((key, value) -> out.put(String.valueOf(key), normalizeClassNames(value)));
+            return out;
+        }
+        if (node instanceof List<?> list) {
+            return list.stream().map(StrictViolationScannerOracleTest::normalizeClassNames).toList();
+        }
+        return node instanceof String text ? parity(text) : node;
     }
 
     /**
@@ -99,7 +90,7 @@ class StrictViolationScannerOracleTest {
      * 两侧不可能相同，故比对时统一去掉本例固定抛出的那个类的包名前缀。
      */
     private static String parity(String value) {
-        return value.replace("java.lang.RuntimeException", "RuntimeException");
+        return value == null ? null : value.replace("java.lang.RuntimeException", "RuntimeException");
     }
 
     private static List<String> texts(JsonNode array) {

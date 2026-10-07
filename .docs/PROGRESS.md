@@ -14,7 +14,7 @@
 | 坐标 | group `io.github.route-forge`（对应 GitHub org），artifact `forge-core` / `forge-spring-boot-starter`；Java 包根 `io.github.routeforge.*`（包名不允许连字符） |
 | 命名通道 | 形态 C：`@ForgeRoute` 组合注解（meta `@RequestMapping`，全量 `@AliasFor` 透传）+ `@Forge` 副注解逃生舱 + `RouteNamingStrategy` SPI（默认关）；冲突 fail-fast = RF_BE_010 |
 | tier 继承 | 五级优先级不变：方法级 = 显式 > 类/包级 `@ForgeTier` = group 继承 > `RouteClassifier` bean > `match` > `unassigned` |
-| middleware | `match.middleware` = 元数据标签（不参与真实鉴权）；`endpoint_middleware` = 真实接入 Spring Security |
+| middleware | `match.middleware` = 归类用标签，**不构成安全边界**；标签来源＝显式 `@ForgeRoute`/`@Forge` 优先，未声明时**从 handler 上的 Spring Security 守卫注解派生**（第四通道，按注解全名识别、零编译期依赖）；starter **不注册/不改写任何 SecurityFilterChain**，`endpoint-middleware` 在 Java 侧降为纯声明值（与 PHP 的实质差异，SPEC §4.4 已记） |
 | 配置保存 | 只写独立 `forge-levels.yml`（备份 + 回读比对），绝不改宿主 `application.yml` |
 | CLI | `ApplicationRunner` 参数式：`--forge:list` / `--forge:types` / `--forge:clear` |
 | 缓存 | 自写 `CacheStore` SPI（不接 Spring Cache），内存实现 + Redis 可选 |
@@ -50,7 +50,15 @@
   不可参数化段原样保留不计参数
 - ✅ **P2-3 扫描层** `ForgeDeclaration`（三通道合并 + 冲突 fail-fast RF_BE_010）+
   `HandlerMethodRouteSource`（handler 表 → `RouteInfo`）：多路径展开成多条、无 path 条件归一为根地址、
-  methods 按实测能力下发；starter 侧共 41 例，两模块 226 例全绿
+  methods 按实测能力下发；三项变异检验各被 1 例抓住
+- ✅ **P2-4 端点与装配** `ForgeAutoConfiguration` + `ForgeRouteRegistry`（常驻装配、取数走缓存）+
+  `ForgeRoutesController`（摘要与层级两端点、错误体按 PHP 同形态、`violations` 只在 `debug=true` 给）+
+  `ForgeProperties`/`YamlShape`/`InMemoryCacheStore`/`Slf4jWarningSink`；
+  端点契约测试断言**响应体原文**，三组上下文（宽松 / 严格无 debug / 严格有 debug），
+  并验证「违例恰为 1」即包自身 `/_forge/routes/**` 已被 URI 段排除（AGENTS 铁律 3）
+- ⚠️ 同一次提交携带了另一会话的 §4.4 守卫标签派生（`GuardLabels` + 其测试、`HandlerMethodRouteSource`
+  的 `middlewareOf`、catalog 的 `spring-security-core`/`jakarta-annotation-api`、SPEC §4.4 全文）——
+  编译耦合（来源类调用派生器、装配又用其构造器），无法拆成两笔独立可编译的提交
 
 ## 两条被实测推翻的前提（P2-3）
 
@@ -87,6 +95,19 @@
 
 ## 本阶段新发现的形态细节（照抄，不「顺手修正」）
 
+- **Boot 会把 {@code Object} 位置上的 YAML 序列绑成索引 Map**：{@code forge.levels.<n>.match.prefix: [/admin]}
+  到达时是 {@code {0=/admin}}，核心层按标量处理后 **整条 match 通道静默失效**（只靠配置归级的路由全掉
+  unassigned）。装配层用 {@code YamlShape} 把「全数字键的 Map」还原成列表（跳号补 null、键序无关）。
+  结论：只要配置值类型是 {@code Object}（为了保宽容语义），就必须过这一道。
+- **`Map.copyOf` 的教训在同一个仓库里复发了第二次**：这次是我自己新写的 {@code ForgeProperties}
+  用它收 {@code levels}/{@code aliases}，摘要键序当场变成 {@code admin, manage, client}。
+  光记规则没用，已把「非注释里的 Map.copyOf」当例行检查项，新代码写完后扫一遍。
+- **`spring-boot-starter-test` 不再自带 MockMvc 自动配置**（Boot 4 按技术栈拆模块）：
+  `@AutoConfigureMockMvc` 在 {@code org.springframework.boot.webmvc.test.autoconfigure}，
+  artifact 是 {@code spring-boot-webmvc-test}；Jackson 也不在测试运行时里，缺它会 406 而不是报缺依赖。
+- **测试夹具不能共用一个会抛异常的控制器**：把「非法默认值声明」放进 DemoController 后，
+  整个类的扫描都抛异常，连带让 6 个无关用例失败。会抛异常的夹具要单独一个类。
+
 - **`--json` 顶层在目标层级为 0 时 PHP 输出 `[]`**：顶层没做 `(object)` 强转，只有每个层级块做了。
   Java 照抄并在 SPEC 注明，脚本侧要能容忍顶层两种形态。
 - **d.ts 文件头时间来自 `date('Y-m-d\TH:i:s.000\Z')`**：毫秒位恒为字面量 `.000`、`Z` 也是字面量、
@@ -94,9 +115,11 @@
 - **emoji 的代理对不能直接喂 `%x`**：`String.format("%04x", Character)` 抛 IllegalFormatConversionException，
   必须显式转 int——这条是被对等测试当场抓到的，纯 Java 单测写不出来。
 
-- ⏳ **P2-4** 两端点（摘要 + 层级）+ 自动装配 + 异常 advice（错误体形态、violations 按 debug 下发）
-- ⏳ **P3** `@ForgeTier` 类/包继承接线、classifier bean、双通道冲突 fail-fast、strict 聚合上 HTTP
-- ⏳ **P4** CLI 三命令；**P5** Security 守卫 / 管理器 / `forge-levels.yml` 写回 / 内嵌摘要；**P6** 示例 + 双前端 + Laravel 端 golden + 发布
+- ⏳ **P4** CLI 三命令（`--forge:list` / `--forge:types` / `--forge:clear`：退出码、红色清单、违规不产出产物、
+  走注册表而不是自己再扫一遍）
+- ⏳ **P5** 管理器页面 + IP 白名单 + `forge-levels.yml` 写回（保存后必须失效缓存）、Redis 缓存驱动、
+  Thymeleaf 内嵌摘要、「classpath 无 Security」启动 WARN
+- ⏳ **P6** 示例后端 + Vue/React 双前端 pnpm 联调 + 真实 Laravel HTTP golden 端到端对等 + maven-publish/signing
 
 ## 跨语言对等的工作流（重要）
 
@@ -140,13 +163,17 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
 
 ## 待办与后续需要拍板的点
 
-当前无阻塞项。下一步是 P1f（`TypeGenerator` d.ts 逐行 + `SummaryRenderer`），随后进入 P2 的 Spring 侧注解与扫描。
+当前无阻塞项。P1 与 P2-1..P2-4 已收口（两端点与自动装配已通），下一步是 P4 命令行三件套。
 
-进入 P5 前有两处需要先定，届时会带上下文再问：
+进入 P5 前原有两处待定，第一处已定：
 
-1. `endpoint_middleware` 的标签字符串怎么翻译成 Security 表达式（`hasAuthority(标签)` / `hasRole(...)` / 允许写 SpEL 原样）；
-   它决定 starter 的可选依赖形状与降级路径。
-2. 内嵌摘要（`@forgeSummary` 的等价物）是否强制依赖 Thymeleaf——倾向「纯 Java 渲染 API + Thymeleaf 方言片段可选」，
+1. ✅ **已定（2026-10-06，准则换成「按大多数开发者的实际写法」）**：`endpoint_middleware` **不做表达式翻译、
+   也不代宿主配 Security**。实测主流写法就是自己去 `authorizeHttpRequests` 里加一行（GitHub 命中文件数
+   34.8 万，与方法注解派 27 万并列两大主流），而 Boot 默认已 `anyRequest().authenticated()`，本包再注册
+   一条链只会打架。于是 Java 侧它是纯声明值，`spring-security-*` 连 `compileOnly` 都不引——守卫注解按
+   **类型全名**反射识别即可。层级标签改由第四通道从守卫注解派生，规则表与两条边界见 SPEC §4.4。
+   口径变更的连带面：`build.gradle.kts` 里「接 Security」的注释、以及各处提到端点保护的 javadoc，落地时一并扫。
+2. ⏳ 内嵌摘要（`@forgeSummary` 的等价物）是否强制依赖 Thymeleaf——倾向「纯 Java 渲染 API + Thymeleaf 方言片段可选」，
    不逼没有模板引擎的纯 SPA 宿主引依赖。
 
 ## 恢复步骤

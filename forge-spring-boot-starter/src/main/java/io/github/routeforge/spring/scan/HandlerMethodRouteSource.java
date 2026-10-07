@@ -4,10 +4,13 @@ import io.github.routeforge.core.contract.RouteSource;
 import io.github.routeforge.core.dto.RouteInfo;
 import io.github.routeforge.core.uri.UriTemplate;
 import io.github.routeforge.spring.annotation.ForgeTiers;
+import io.github.routeforge.core.support.WarningSink;
 import io.github.routeforge.spring.naming.RouteCandidate;
 import io.github.routeforge.spring.naming.RouteNamingStrategy;
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,21 +49,24 @@ public final class HandlerMethodRouteSource implements RouteSource {
     @Nullable
     private final RouteNamingStrategy namingStrategy;
 
+    private final WarningSink warnings;
+
     public HandlerMethodRouteSource(List<RequestMappingHandlerMapping> mappings,
-            @Nullable RouteNamingStrategy namingStrategy) {
+            @Nullable RouteNamingStrategy namingStrategy, WarningSink warnings) {
         this.mappings = List.copyOf(mappings);
         this.namingStrategy = namingStrategy;
+        this.warnings = warnings;
     }
 
     /** 只有一个映射（绝大多数宿主）的便捷构造。 */
     public HandlerMethodRouteSource(RequestMappingHandlerMapping mapping) {
-        this(List.of(mapping), null);
+        this(List.of(mapping), null, WarningSink.NOOP);
     }
 
     /** 只有一个映射、但接了命名策略的形态（宿主只有一份 {@code RequestMappingHandlerMapping} 时的常态）。 */
     public HandlerMethodRouteSource(RequestMappingHandlerMapping mapping,
             @Nullable RouteNamingStrategy namingStrategy) {
-        this(List.of(mapping), namingStrategy);
+        this(List.of(mapping), namingStrategy, WarningSink.NOOP);
     }
 
     @Override
@@ -75,6 +81,7 @@ public final class HandlerMethodRouteSource implements RouteSource {
     private List<RouteInfo> explode(RequestMappingInfo info, HandlerMethod handlerMethod) {
         List<String> patterns = patternStrings(info);
         ForgeDeclaration declared = ForgeDeclaration.of(handlerMethod);
+        List<String> middleware = middlewareOf(declared, handlerMethod);
         List<String> methods = verbsOf(info);
         String tier = declared.tier() != null ? declared.tier() : ForgeTiers.resolve(handlerMethod.getMethod());
         List<RouteInfo> out = new ArrayList<>(patterns.size());
@@ -91,12 +98,35 @@ public final class HandlerMethodRouteSource implements RouteSource {
                     methods,
                     template.parameters(),
                     defaults,
-                    declared.middleware(),
+                    middleware,
                     tier,
                     declared.aliases(),
                     handlerMethod));
         }
         return List.copyOf(out);
+    }
+
+    /**
+     * 标签：显式声明优先，没声明才用守卫注解派生的结果（SPEC §4.4 铁律 2「不要求重复声明」）。
+     *
+     * <p>两者都在场且不一致时<b>不报错</b>——守卫可以有很多名字，对不上是常态——只经 {@link WarningSink}
+     * 出一条提示；接不接这个 sink 由装配层按 {@code strict-mode} 决定，所以这里无条件上报。
+     */
+    private List<String> middlewareOf(ForgeDeclaration declared, HandlerMethod handlerMethod) {
+        List<String> derived = GuardLabels.derive(handlerMethod);
+        if (declared.middleware().isEmpty()) {
+            return derived;
+        }
+        if (!derived.isEmpty() && !sameLabels(declared.middleware(), derived)) {
+            warnings.warning("handler " + handlerMethod.getBeanType().getSimpleName() + "#"
+                    + handlerMethod.getMethod().getName() + " 上显式声明的 middleware " + declared.middleware()
+                    + " 与守卫注解派生的标签 " + derived + " 不一致，已采用显式声明；派生结果仅作提示，不判错");
+        }
+        return declared.middleware();
+    }
+
+    private static boolean sameLabels(List<String> first, List<String> second) {
+        return new LinkedHashSet<>(first).equals(new LinkedHashSet<>(second));
     }
 
     /** 名字：显式声明优先；没声明才问命名策略（默认无策略即返回 null，等于未命名）。 */
@@ -164,6 +194,7 @@ public final class HandlerMethodRouteSource implements RouteSource {
             }
             out.put(name, value);
         });
-        return Map.copyOf(out);
+        // 保序：默认值的键序会原样出现在 parameter_defaults 里
+        return Collections.unmodifiableMap(new LinkedHashMap<>(out));
     }
 }

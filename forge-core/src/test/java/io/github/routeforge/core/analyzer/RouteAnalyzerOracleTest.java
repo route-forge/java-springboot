@@ -9,7 +9,6 @@ import io.github.routeforge.core.config.LevelsConfig;
 import io.github.routeforge.core.dto.RouteInfo;
 import io.github.routeforge.core.filter.RouteNameFilter;
 import io.github.routeforge.core.repository.RouteRepository;
-import io.github.routeforge.core.support.StrictViolationScanner;
 import io.github.routeforge.core.support.WarningSink;
 import io.github.routeforge.core.tier.TierResolver;
 import java.util.ArrayList;
@@ -65,7 +64,7 @@ class RouteAnalyzerOracleTest {
         assertSame(outputs, "aliases", analysis.aliases());
         assertSame(outputs, "collisions", analysis.collisions());
         assertSame(outputs, "unnamed", analysis.unnamed().stream().map(RouteAnalyzer.Unnamed::asMap).toList());
-        assertSame(outputs, "violations", violationsAsMap(analysis.violations()));
+        assertSame(outputs, "violations", analysis.violations().toWireMap());
         assertThat(analysis.violations().count())
                 .isEqualTo(outputs.get("violationCount").asInt());
         assertSame(outputs, "unnamedWarnings", RouteAnalyzer.unnamedWarnings(analysis.unnamed(), levelNames));
@@ -116,33 +115,6 @@ class RouteAnalyzerOracleTest {
         return rows.stream().map(Row::asMap).toList();
     }
 
-    private static Map<String, Object> violationsAsMap(StrictViolationScanner.Violations violations) {
-        Map<String, Object> wire = new LinkedHashMap<>();
-        wire.put("missing_name", violations.missingName().stream().map(entry -> {
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("uri", entry.uri());
-            row.put("methods", entry.methods());
-            row.put("level", entry.level());
-            row.put("source", entry.source());
-            return row;
-        }).toList());
-        wire.put("unassigned", violations.unassigned().stream().map(entry -> {
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("name", entry.name());
-            row.put("uri", entry.uri());
-            row.put("methods", entry.methods());
-            row.put("middleware", entry.middleware());
-            return row;
-        }).toList());
-        wire.put("unresolved", violations.unresolved().stream().map(entry -> {
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("name", entry.name());
-            row.put("uri", entry.uri());
-            row.put("reason", entry.reason());
-            return row;
-        }).toList());
-        return wire;
-    }
 
     /** classifier 抛错文本含异常类名（PHP 无包前缀）：比对时统一去掉 Java 侧的包名前缀。 */
     private static String parity(String value) {

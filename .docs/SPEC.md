@@ -72,13 +72,13 @@ Java 侧落地口径：
 |---|---|---|---|
 | `forge.levels.<name>.description` | `string` | `""` | 层级描述 |
 | `forge.levels.<name>.match.prefix` | `string[]` | `[]` | URI 前缀，按段匹配 |
-| `forge.levels.<name>.match.middleware` | `string[]` | `[]` | 中间件标签，见 §4.4 |
+| `forge.levels.<name>.match.middleware` | `string[]` | `[]` | 中间件标签（仅归类），见 §4.4 |
 | `forge.levels.<name>.match.middleware-match` | `any`\|`all`\|DNF | `any` | DNF 为 `List<List<Integer>>` |
 | `forge.levels.<name>.load` | `eager`\|`lazy` | `lazy` | 前端预加载提示 |
-| `forge.levels.<name>.endpoint-middleware` | `string[]` | `[]` | 该层级端点访问要求，接 Spring Security |
+| `forge.levels.<name>.endpoint-middleware` | `string[]` | `[]` | 该层级端点访问要求，**声明值**，见 §4.4 |
 | `forge.endpoint-prefix` | `string` | `/_forge/routes` | 端点前缀 |
 | `forge.url-prefix` | `string?` | `null` | 下发给前端的 URL 前缀 |
-| `forge.endpoint-middleware` | `string[]` | `[]` | 摘要端点访问要求 |
+| `forge.endpoint-middleware` | `string[]` | `[]` | 摘要端点访问要求，**声明值**，见 §4.4 |
 | `forge.cache-ttl` | `int?` | `3600` | 统一 TTL |
 | `forge.cache-driver` | `memory`\|`redis` | `memory` | Java 侧驱动名，语义见 §4.6 |
 | `forge.strict-mode` | `bool` | `false` | 严格模式 |
@@ -155,11 +155,64 @@ Framework 7 实测事实（由 `SpringRoutingModelSpikeTest` 7 例钉成回归�
   `parameter_defaults`。声明的名字不在 URI 模板内 → fail-fast。
 - 参数名来源是 URI 模板本身，不依赖 `-parameters`；`-parameters` 仍全仓强制（配置构造绑定需要）。
 
-### 4.4 middleware（Spring 无逐路由中间件） ⟨P3⟩
+### 4.4 middleware（守卫标签的来源与边界） ⟨P3⟩
 
-- `match.middleware` 是**纯元数据标签**，来自 `@ForgeRoute(middleware = {...})` / `@Forge(middleware = {...})`，
-  只参与层级归类，**不构成安全边界**；真实鉴权仍由宿主的 Spring Security 决定。
-- 提供自检：`--forge:list` 与 `/api/routes` 里每条路由的 `middleware` 字段即该标签集合，便于人工核对与 Security 规则的一致性。
+Spring 侧**没有「逐路由中间件」**，但有两条与 Laravel 等价的守卫声明主流写法。按 GitHub 公开 Java 代码
+字面命中量级实测（2026-10-06，单位是命中文件数、含 fork 重复计数，只看量级与相对比例）：
+`authorizeHttpRequests` 34.8 万、`requestMatchers(` 30.2 万、`@PreAuthorize("hasRole` 27.0 万、
+`@PreAuthorize("hasAuthority` 8.3 万、`@PreAuthorize("@ss.hasPermi`（若依派权限码）3.6 万、
+`@RequiresPermissions`（Shiro）5.7 万、`@SaCheckPermission`（Sa-Token）0.85 万。
+即 **URL 规则**与**方法注解**是并列的两大主流，第三方框架是长尾（不为它们设计通道）。
+
+官方口径（Spring Security 7.1 文档原话，三条都直接影响设计）：
+
+- request-level = `coarse-grained / declared in a config class / DSL`，method-level =
+  `fine-grained / local to method declaration / Annotations`，二者互补，取舍只是
+  *"where you want your authorization rules to live"*；
+- *"By default, Spring Security requires that every request be authenticated."*；
+- *"when you use annotation-based Method Security, then unannotated methods are not secured"*——
+  所以注解派生出来的标签**永远不能自称安全边界**。
+
+三条铁律与一条差异，据此定死：
+
+1. **标签只做归类，不构成安全边界**（不变）：真实鉴权始终归宿主的 `SecurityFilterChain`。
+2. **不要求宿主重复声明**：路由的 `middleware` 优先取显式通道（`@ForgeRoute(middleware=...)` /
+   `@Forge(middleware=...)`）；两者都没给时，由**第四通道从 handler 上已有的守卫注解派生**。
+   按 URL 配 Security 的那批宿主用不到它——他们的层级按 `match.prefix` 归类，与 `requestMatchers`
+   天然同构，两边零声明。
+3. **starter 不代宿主配 Security**：不注册、不改写、不排序任何 `SecurityFilterChain`，也不反射读别人的
+   规则。包自身端点交宿主按 `requestMatchers("/_forge/**")` 自己配（Boot 默认已要求认证）。
+4. **与 PHP 侧的实质差异（必须记，不许静默分叉）**：`forge.endpoint-middleware` 在 Laravel 侧是真的挂到
+   路由上生效，Java 侧**只作声明值**——接受、按原样出现在配置产物里、不静默丢弃，但**不产生任何行为**。
+   因此 Java 侧不引 `spring-security-*` 依赖（连 `compileOnly` 都不需要，注解按名字识别）。
+   P5 唯一相关的动作是：classpath 上没有 Security 时启动打一条 WARN，明示 `/_forge/*` 端点当前无鉴权保护。
+
+派生规则（`GuardLabels`，`forge-spring-boot-starter`）。识别一律按**注解类型全名**匹配，
+故零编译期依赖；就近语义复用 `MergedAnnotations` + `TYPE_HIERARCHY`（方法级覆盖类级，
+与 Spring Security 文档一致），并因此自动吃透**组合注解**（宿主自建的 `@AdminOnly` meta-annotate
+`@PreAuthorize` 也算）：
+
+| 声明 | 派生标签 | 说明 |
+|---|---|---|
+| `@PreAuthorize("hasRole('ADMIN')")` | `ADMIN` | **一律取注解里的字面值**，不补也不剥 `ROLE_` 前缀——加工会把 `hasRole('ADMIN')` 与 `hasRole('ROLE_ADMIN')` 这两种不同要求悄悄归一，那是读错 |
+| `@PreAuthorize("hasAuthority('system:user:list')")` | `system:user:list` | 权限码字面值 |
+| `@PreAuthorize("hasRole('A') and hasAuthority('p:read')")` | `A`、`p:read` | 顶层 `and` 是合取（都要求），拆成标签并集 |
+| `@PreAuthorize("hasAnyRole('A','B')")` | `expression:` 兜底 | 或语义；拆开会**放宽**归类，属于读错，宁可原样 |
+| `@PreAuthorize("hasRole('A') and #id == authentication.name")` | `expression:` 兜底 | 混入不可分类的项时**整条原样**——规则是「要么全懂，要么不猜」 |
+| `@PreAuthorize("authenticated()")` / `isAuthenticated()` | `__authenticated` | 只要求登录、无权限名；`__` 前缀是本包保留字面量 |
+| `@PreAuthorize("permitAll()")` / `denyAll()` | `__permit_all` / `__deny_all` | 同上 |
+| `@Secured("ROLE_ADMIN")` | `ROLE_ADMIN` | 字面值。**注意**：`@Secured` 的值按 Spring 习惯带 `ROLE_`，而 `hasRole` 不带，同一份权限两种写法会出两个标签——这是如实反映声明差异，不做归一 |
+| `@RolesAllowed("ADMIN")`（jakarta 与 javax 两种包名都认） | `ADMIN` | 同上；多值 → `expression:` 兜底（`@Secured` 多值是或还是与未实测，不猜） |
+| `@PermitAll` / `@DenyAll` | `__permit_all` / `__deny_all` | JSR-250 |
+| 其余任何表达式 | `expression:` + 原文 | 可读但不可归类；若依的 `@ss.hasPermi('x')` 全落这里 |
+
+派生的两条边界，写在这里免得被当成 bug：
+
+- **不校验 method security 是否真被启用**（`@EnableMethodSecurity` 及其 `securedEnabled` /
+  `jsr250Enabled` 开关）：宿主把注解写成装饰物时，派生标签会跟着装饰它。这是标签只做归类的直接后果，
+  也是第 1 条铁律存在的原因。
+- 显式通道与派生结果**不一致时不报错**（守卫可以有很多个名字，撞不上是常态），只在严格模式下经
+  `WarningSink` 出一条提示；`--forge:list` 与 `/api/routes` 的 `middleware` 字段照旧是最终采用的标签集。
 
 ### 4.5 包自身路由排除 ⟨P2⟩
 
@@ -251,7 +304,7 @@ Framework 7 实测事实（由 `SpringRoutingModelSpikeTest` 7 例钉成回归�
 | 别名 | ⟨P1/P3⟩ 宏优先 config / 撞车忽略 / 悬空 RF_BE_008 / 跨层级铺开 / 计数不叠加 |
 | 严格模式 | ⟨P3⟩ RF_BE_009 聚合一次报全、包自身路由豁免 |
 | 端点响应 | ⟨P2⟩ 摘要与层级结构、空层级 `{}`、自定义前缀规范化、缓存命中、404 |
-| Spring 特有 | ⟨P2/P3⟩ 组合注解映射生效、双通道冲突、正则剥离、可选参数 |
+| Spring 特有 | ⟨P2/P3⟩ 组合注解映射生效、双通道冲突、正则剥离、可选参数、守卫注解→标签派生（§4.4 规则表逐行） |
 | CLI | ⟨P4⟩ 输出格式、退出码、违规不产出产物 |
 | 跨语言对等 | ⟨P6⟩ PHP 实跑 golden fixture 逐字段断言 |
 

@@ -4,6 +4,7 @@ import io.github.routeforge.spring.annotation.Forge;
 import io.github.routeforge.spring.annotation.ForgeRoute;
 import io.github.routeforge.spring.annotation.ForgeTier;
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -39,7 +40,7 @@ public record ForgeDeclaration(
         aliases = List.copyOf(aliases);
         middleware = List.copyOf(middleware);
         optional = List.copyOf(optional);
-        defaults = Map.copyOf(defaults);
+        defaults = Collections.unmodifiableMap(new LinkedHashMap<>(defaults));
     }
 
     /** 是否由 handler 上的注解显式给了名字（给了就不该再走命名策略）。 */
