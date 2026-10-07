@@ -9,8 +9,9 @@
 |---|---|
 | 能力范围 | v1 全量对等 SPEC（含管理器页面与 d.ts 生成） |
 | 交付形态 | 双模块库（`forge-core` + `forge-spring-boot-starter`）+ 示例后端 + Vue3/React 双前端 |
-| 语言/构建 | Java 21（`options.release` 锁定，不用 toolchain 自动下载）+ Gradle Kotlin DSL + wrapper 9.7.0-all |
-| Spring 基线 | Spring Boot 4.1.1（2026-10 最新稳定；4.2.0 仅 milestone） |
+| 语言/构建 | Java 17 基线（`options.release` 锁定，不用 toolchain 自动下载）+ Gradle Kotlin DSL + wrapper 9.7.0-all。⟨待落地⟩**现状仍是 21**，代码已实证零 Java 18-21 语法/API，改一行即可；理由与连带面见「待办」第 3 条 |
+| Spring 基线 | 编译与测试用 Spring Boot 4.1.1（2026-10 最新稳定；4.2.0 仅 milestone） |
+| 支持边界 | 承诺 **tested on Boot 4.x**；Boot 3.5+ **物理兼容但不承诺**（不跑测试、SPEC 不写「支持」）；Boot 2 及以下**明确排除**。2026-10-07 拍板，⟨待落地⟩ |
 | 坐标 | group `io.github.route-forge`（对应 GitHub org），artifact `forge-core` / `forge-spring-boot-starter`；Java 包根 `io.github.routeforge.*`（包名不允许连字符） |
 | 命名通道 | 形态 C：`@ForgeRoute` 组合注解（meta `@RequestMapping`，全量 `@AliasFor` 透传）+ `@Forge` 副注解逃生舱 + `RouteNamingStrategy` SPI（默认关）；冲突 fail-fast = RF_BE_010 |
 | tier 继承 | 五级优先级不变：方法级 = 显式 > 类/包级 `@ForgeTier` = group 继承 > `RouteClassifier` bean > `match` > `unassigned` |
@@ -289,6 +290,7 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
 ## 待办与后续需要拍板的点
 
 当前无阻塞项。P1、P2-1..P2-4、守卫标签第四通道、两端点/自动装配、P4 命令行三件套均已收口，下一步是 P5 管理器。
+**唯一带时间窗口的待办是下面第 3 条（版本支持边界）**——它该在 P6 发 `1.0.0` 之前、且趁 0.x 砍版本还不要钱的时候落地。
 
 进入 P5 前原有两处待定，第一处已定：
 
@@ -300,6 +302,50 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
    口径变更的连带面：`build.gradle.kts` 里「接 Security」的注释、以及各处提到端点保护的 javadoc，落地时一并扫。
 2. ⏳ 内嵌摘要（`@forgeSummary` 的等价物）是否强制依赖 Thymeleaf——倾向「纯 Java 渲染 API + Thymeleaf 方言片段可选」，
    不逼没有模板引擎的纯 SPA 宿主引依赖。
+3. ⏳ **版本支持边界（2026-10-07 拍板「按最省的兼容来做」，四件事一批落地，尚未动手）**
+
+   **为什么现在做**：承诺支持是单向棘轮——`0.1.0` 写了「支持 Boot 3.5」，以后收回要付一个 major；写了「只支持 4.x」，
+   永远不用道歉。而基线数字是另一件事，两者别捆：`release=21` 挡掉的主要人群根本不是 Boot 3 用户，而是
+   **Boot 4 + JDK 17**（Boot 4 官方只要求 Java 17，17 是 JDK 的 LTS，大量宿主升了 Boot 不升 JDK）。
+
+   **已实证、不必重查的四条**（2026-10-07 对着 `src/main` 全量 import 与语法探针扫过）：
+   - main 侧 Spring API 全部落在 Framework **6.1 ∩ 7.x 交集**内（`AutoConfiguration` / `ConditionalOn*` /
+     `@ConfigurationProperties` 构造绑定 / `ObjectProvider` / `MergedAnnotations.from(elem, TYPE_HIERARCHY)` +
+     `getString`/`getStringArray`/`VALUE` / `getHandlerMethods` / `getPathPatternsCondition` / `getPatternValues` /
+     `getMethodsCondition` / `getPatternString` / `getBeanType`），Boot 3.2（FW 6.1）全都有；
+   - main 侧**零 Jackson**（JSON 走自研 `JsonWriter`，端点返回 `Map<String,Object>`）→ 天然免疫 Boot 4 最大的
+     Jackson 2→3 断层（`com.fasterxml.jackson` → `tools.jackson`）；
+   - main 与 test 均**零 servlet 引用**（连全限定名都没写）→ 免疫 EE 10→11 / Servlet 6.0→6.1 断层；
+     顺带证明 `compileOnly(libs.jakarta.servlet.api)` 是**死依赖**；
+   - 守卫注解只以**类型全名字符串**出现（`javax.*` 与 `jakarta.*` 双认），main 零 Security 依赖。
+
+   **四件改动（一笔 `build(starter)` 提交，不与 P5 混）**：
+   1. `build.gradle.kts`：`options.release.set(21)` → `17`，注释里「Java 21 为库的公开基线（Spring Boot 4 自身要求
+      17+）」改成同时交代两线口径。**连带清掉 `gradle/libs.versions.toml` 第 4 行的 `java = "21"`**——已实证全仓无
+      任何 `.kts` 引用它（真基线只有 `options.release` 一处），留着就是「两处声明一处生效」，改完 17 之后 catalog
+      里的 21 会误导下个会话。**做法是删掉这条，不要改成 `options.release.set(libs.versions.java.get().toInt())`**：
+      catalog 的职责是依赖版本，语言级别归根 `build.gradle.kts`（同文件注释「避免两处漂移」的既有分层）。
+   2. `forge-spring-boot-starter/build.gradle.kts`：删 `compileOnly(libs.jakarta.servlet.api)` 及其 test 对应行；
+      新增**只做 `compileJava`、不跑测试**的 Boot 3.5 哨兵 source set/configuration；
+   3. `gradle/libs.versions.toml`：加 `springBoot35` BOM 别名（仅哨兵用），`springBoot = "4.1.1"` 不动；
+   4. `BuildConventionTest#targetsJava21`（在 **forge-core** 的 test 里）：现在断言 `Runtime.version().feature() == 21`，
+      **钉的是构建机 JVM 而不是编译产物**——换台 JDK 25 的机器就假红。改为读自身 class 文件头 8 字节的 major version
+      断言 `== 61`（与同文件 `-parameters` 那条反射探针同风格）。
+      **注意这条旧断言的行为是反直觉的**：降 `options.release` 到 17 之后它**仍然会绿**（构建机还是 JDK 21），
+      于是「全量门禁通过」完全不能证明基线真的降了、也不能阻止以后有人改回 21——它压根没在守这件事，这正是本条要修的
+      缺陷，属于本文件「断言必须防真空通过」那一节的同类问题。所以两条必须**同笔**提交；只改断言不降 release 会当场
+      红（产物还是 65，属正常），只降 release 不改断言则静默假绿。
+
+   **哨兵的能力边界（写进它的注释，别升口径）**：它只保证「对着 FW 6.1 编得过」，**不保证运行期行为一致**。
+   真正会分叉的是 `YamlShape` 依赖的 Boot Binder 索引 Map 形态（`{0=/admin}`，本仓在 Boot 4 上实测得来）——3.5 上
+   未做运行验证。所以口径只能停在「物理兼容、untested」，**不许在 SPEC/README 写成「支持 Boot 3」**。
+
+   **SPEC 的三行承诺口径（tested on 4.x / 兼容 3.5+ 未测试 / 明确排除 Boot 2）与 §7 那行「Java 21 基线」，
+   必须与上面四条同一批提交落地**——本仓已有一次「先写进 SPEC 的话被自己收回」，未落地的口径不进 SPEC。
+
+   验收：`./gradlew.bat clean build --offline --rerun-tasks` 全绿；哨兵 configuration 单独跑一次 `compileJava` 绿；
+   再做一次变异检验——往某个 main 类塞一个 FW7-only 方法调用，**哨兵必须变红**（证明它咬得住，而不是空跑）。
+   最后 `javap -v` 抽查任一 class 确认 major 61。
 
 ## 恢复步骤
 
