@@ -120,12 +120,98 @@
 - **emoji 的代理对不能直接喂 `%x`**：`String.format("%04x", Character)` 抛 IllegalFormatConversionException，
   必须显式转 int——这条是被对等测试当场抓到的，纯 Java 单测写不出来。
 
-- ⏳ **P4** CLI 三命令（开工前需给 `ForgeRouteRegistry` 补一个 `allRoutesWithTiers()` 转发——`--forge:list`
-  要看的 `middleware` 列在 `RouteRepository` 里已有，registry 目前只透 `summary()`/`routesForLevel()`）（`--forge:list` / `--forge:types` / `--forge:clear`：退出码、红色清单、违规不产出产物、
-  走注册表而不是自己再扫一遍）
+- ⏳ **P4** CLI 三命令 `--forge:list` / `--forge:types` / `--forge:clear`：退出码、红色清单、违规是否产出产物、
+  走注册表而不是自己再扫一遍。开工前两条前置：给 `ForgeRouteRegistry` 补 `allRoutesWithTiers()` 转发
+  （`middleware` 列在 `RouteRepository` 里已有，registry 目前只透 `summary()`/`routesForLevel()`），
+  以及先读「P3 重排」末节为 P4 记下的参照事实（list 与 types 对违规的处理**刻意相反**、产物纯净性与
+  Spring Boot 日志默认写 stdout 的冲突）
 - ⏳ **P5** 管理器页面 + IP 白名单 + `forge-levels.yml` 写回（保存后必须失效缓存）、Redis 缓存驱动、
   Thymeleaf 内嵌摘要、「classpath 无 Security」启动 WARN
 - ⏳ **P6** 示例后端 + Vue/React 双前端 pnpm 联调 + 真实 Laravel HTTP golden 端到端对等 + maven-publish/signing
+
+## P3 重排（2026-10-07，对着 `G:\web\php-laravel` 参照逐条核过）
+
+**先记账：原 P3 的四项已被前面几个阶段吸收，不要再当待办做**（旧 ⏳ P3 行已删）。
+
+| 原 P3 项 | 现状与证据 |
+|---|---|
+| `@ForgeTier` 类/包继承接线 | ✅ 已做：`ForgeTiers.resolve()` 含 `getPackage()` 分支（`annotation/ForgeTiers.java:23-45`），`HandlerMethodRouteSource:79` 接线，P2-1 有断言 |
+| classifier bean | ✅ 已做：`ForgeAutoConfiguration:107` 注 `ObjectProvider<RouteClassifier>` → registry → `TierResolver` |
+| 双通道冲突 fail-fast | ✅ 已做：`ForgeDeclaration` 的 RF_BE_010（P2-3，含 1 例冲突断言） |
+| strict 聚合上 HTTP | ✅ 已做：P2-4 的 `RouteRepository.infos()` 预扫描 + 错误体 `violations` 按 `debug` 下发，契约测试三组上下文钉住 |
+
+重排后的 P3 = **对照参照查出的真实缺口**，四项按依赖排序。
+
+### P3-1 框架内部路由的第二维排除（唯一有生产风险的一条）
+
+Laravel 靠**路由名前缀**排除框架内部路由（`storage.*` 等，见 `ForgeServiceProvider.php:71-78, 228-245`）。
+Spring 侧这条路**根本不存在**：宿主不给 `@ForgeRoute(name=...)` 的路由全都是未命名，名字前缀无物可匹。
+
+现在适配层只有 URI 一维（`ForgeRouteRegistry:53-54` 只喂了自家 `endpoint_prefix`）。而
+`StrictViolationScanner` 的兜底口径是「未命名且不命中任何层级 → 不属于 forge 管辖」（其 javadoc:27-28
+举的理由正是"否则框架内部路由会把严格模式报错刷满"）。**这条兜底在 Spring 侧比在 Laravel 侧脆得多**：
+宿主只要把某个层级的 `match.prefix` 写宽（`/`，或 `/api` 而 actuator 挂在 `/api/...` 下），
+`/error`（Boot 的 `BasicErrorController`）、`/actuator/**`、springdoc 的 `/v3/api-docs`
+就会整批落进 `missing_name`，把严格模式刷满 500——而宿主**没有任何办法**给它们命名来消掉。
+CI 门禁会被永久打断，且报错文案指向的是框架路由，排查方向是错的。
+
+做法：给 `RouteNameFilter` 的 URI 维度加**默认排除集**（至少 `/error`；`/actuator` 建议按
+classpath 探测可选生效），并允许宿主追加。需要拍板的点（开工前问）：
+
+1. 是否新增配置键 `forge.exclude-uri-prefixes`（`ForgeProperties` 现有 10 个组件里**没有**同类字段，
+   这是新键 → 要进 SPEC §3 并记为 Java 专属扩展，Laravel 无对等键）；
+2. 默认集里放哪些：`/error` 必放；`/actuator`、`/v3/api-docs` 放默认集还是留给宿主追加。
+
+验收：新增一个 `match.prefix: [/]` 宽层级的契约上下文，断言 `/error` 既不进元信息也不进 violations；
+删掉默认排除集时该断言必须红（变异检验）。
+
+### P3-2 「注解写在不会被消费的位置」的提示
+
+参照物是 `ForgeRouteRegistrar::__destruct`（`php-laravel:138-165`）：组属性挂在 Registrar 上却从未被消费
+→ strict 下 error、否则 warning，**刻意不抛**（析构期抛异常致命）。
+
+Java 侧的对应场景确实存在，而且本仓已踩过其中两个：`@Forge` 标在没有映射注解的方法上（永不成为 handler）、
+`@ForgeTier` 标在不含任何 handler 的类或包上、`@ForgeRoute` 标在漏了 `@Controller`/`@RestController` 的类上
+（「断言必须防真空通过」第 ① 次教训就是这个）。做法：装配后比对 bean 定义做一次扫描，经 `WarningSink` 出提示，
+不抛异常。需要拍板：扫 bean 的误报面与启动成本是否可接受（我倾向只在 `debug=true` 或 strict 下扫一次）。
+
+### P3-3 时机差异记账（纯文档，别写成代码）
+
+对照后要认下来的三条等价、一条差异，写进 SPEC 免得下个会话当缺口重做：
+
+- **层级名合法性**：PHP 在三个定义入口（宏 / Registrar / `updateGroupStack`）即查 `config('forge.levels')`
+  抛 `UnknownLevelException`；Java 在 `TierResolver` 抛 RF_BE_002。Laravel 的路由文件每次请求都要重新注册，
+  所以两侧都是「同一次请求内、响应之前」，**形态等价**，不需要提前到启动期；
+- **悬空别名 / 别名撞车 / 同名跨层级重复**：PHP 全部延迟到扫描期（`AliasResolver.php:109-116, 146-154`、
+  `RouteAnalyzer.php:177-190`），撞车时真实路由赢、别名丢弃并 warning——Java 已同形（核心层移植自同一份代码）；
+- **PHP 没有任何启动期预热扫描**。Java 若为了"更早报错"加启动期扫一遍，会连带把 strict 聚合提前到启动期，
+  宿主行为就从"请求 500"变成"启不来"——**不要做**；
+- 唯一 Java 多出来的时机面：`GuardLabels` 的显式/派生不一致提示是无条件经 `WarningSink`（SPEC §4.4 已记）。
+
+### P3-4 strict × 缓存 × debug 三件套的 HTTP 面断言
+
+PHP 侧这四条是一个组合：缓存命中跳过预扫描（`RouteRepository.php:108-111, 181-184`）、违规**永不**入缓存
+（`cache->set` 在扫描之后，:158/:239）、`debug` 整体旁路缓存、两个端点同口径。Java 结构上已满足
+（`RouteRepository:83-85, 113-115` 命中即 return；`infos()` 先抛后 `cache.set`），**但契约测试一条都没钉**。
+补一组就够：strict 下先 500 → 关 strict 取到 200 → 再开 strict 仍 500（证明违规没被缓存"洗白"）；
+外加 `debug=true` 时每请求重扫的探针（可以用 P3-2 的 warning 计数，或 `GuardLabels` 不一致提示的条数）。
+
+### 给 P4 记下的参照事实（现在不动手，照抄时最容易弄反）
+
+- **`list` 与 `types` 对严格模式违规的处理刻意相反**：`list` 有违规**照常出全表**、末尾追加红色清单、退 1
+  （排查场景命令必须还能跑出全貌）；`types` 有违规**拒绝产出任何** d.ts/JSON、退 1
+  （d.ts 会被 commit，宁可不出，也不给出一个"看起来是对的"的错契约）。
+- **产物纯净性在 Java 侧是全新的一整件事**：Laravel 有 `WritesToErrorOutput` trait 把辅助信息挪到 stderr
+  （并在测试注入 `BufferedOutput` 拿不到 error 流时回退同流）；而 **Spring Boot 的 logback console
+  默认就写 stdout**，`--forge:types > x.d.ts` 会被 banner 与日志一起污染。P4 必须先定日志目标口径。
+- 退出码：Forge 异常 → 打 `[错误码] 消息` 退 1；未知 level → 退 1；有产物即 0（warnings 不影响退出码）。
+- `list` 的选项互斥：`--unnamed` 与 `--json` / `--unassigned` / `--aliases` 互斥，组合即报错退 1；
+  `--level` 额外接受 `unassigned`，`--unnamed` 时接受虚拟分组 `unresolved`。
+- `--json` 字段集：`{levels, filter, count, tier_counts, warnings, routes[...]}`，`tier_counts`
+  含所有层级与 `unassigned`（0 也列出）；**着色（品红=unassigned、黄=别名、绿=被指向、红=撞车）只存在于表格模式**。
+- `clear --level` 必须走 `forgetLevel`（内含「层级失效连带失效 summary」的不变量），禁止直接 `forget(key)`。
+- 注意命令名的形态差异：PHP 是 `route:forge:list` 这类 Artisan 命令名，Java 侧已定为 `--forge:list` 参数式
+  `ApplicationRunner`——这是 Java 专属扩展，不是对等物，别在 P6 的 Laravel golden 比对里当差异查。
 
 ## 跨语言对等的工作流（重要）
 
