@@ -3,6 +3,7 @@ package io.github.routeforge.spring.endpoint;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+import io.github.routeforge.core.cache.RouteCache;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,9 @@ class ForgeEndpointsContractTest {
 
     @Autowired
     private io.github.routeforge.spring.config.ForgeProperties properties;
+
+    @Autowired
+    private RouteCache cache;
 
     private MvcResult fetch(String path) throws Exception {
         return mockMvc.perform(get(path)).andReturn();
@@ -125,6 +129,12 @@ class ForgeEndpointsContractTest {
 
             assertThat(second).isEqualTo(first);
         }
+
+        @Test
+        @DisplayName("非 debug 上下文 → 缓存 bean 处于启用态（disabled=false）")
+        void cacheEnabledWithoutDebug() {
+            assertThat(cache.disabled()).as("debug 未开时缓存应生效").isFalse();
+        }
     }
 
     @Nested
@@ -152,6 +162,15 @@ class ForgeEndpointsContractTest {
             // 摘要侧没有 level 上下文：错误体只有 code 与 message 两项
             assertThat(body).doesNotContain("\"level\"").doesNotContain("violations");
         }
+
+        @Test
+        @DisplayName("违规永不入缓存：连取两次仍 500（不会因缓存命中跳过预扫描被洗白，SPEC §4.9）")
+        void violationNeverCached() throws Exception {
+            body("/_forge/routes/admin", 500); // 第一次：miss → infos() 预扫描抛 → 500，不 cache.set
+            body("/_forge/routes/admin", 500); // 第二次：仍 miss（上一轮没写缓存）→ 再抛 → 仍 500
+            assertThat(cache.get("admin", java.util.Map.class))
+                    .as("strict 抛异常路径不得留下任何层级缓存").isNull();
+        }
     }
 
     @Nested
@@ -178,6 +197,12 @@ class ForgeEndpointsContractTest {
             assertThat(body)
                     .contains("Route Forge strict_mode found 1 route configuration problem(s):")
                     .contains("GET /manage/reports -> level [manage] via a config match rule");
+        }
+
+        @Test
+        @DisplayName("debug=true 整体旁路缓存：缓存 bean 报 disabled，每请求重扫（SPEC §4.7/§4.9）")
+        void debugBypassesCache() {
+            assertThat(cache.disabled()).as("debug=true 时缓存应被旁路").isTrue();
         }
 
         private static int occurrences(String haystack, String needle) {
