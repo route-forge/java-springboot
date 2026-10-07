@@ -9,6 +9,10 @@ import io.github.routeforge.core.repository.RepositoryConfig;
 import io.github.routeforge.core.support.WarningSink;
 import io.github.routeforge.core.tier.RouteClassifier;
 import io.github.routeforge.spring.cache.InMemoryCacheStore;
+import io.github.routeforge.spring.cli.ForgeClearCommand;
+import io.github.routeforge.spring.cli.ForgeCliRunner;
+import io.github.routeforge.spring.cli.ForgeListCommand;
+import io.github.routeforge.spring.cli.ForgeTypesCommand;
 import io.github.routeforge.spring.config.ForgeProperties;
 import io.github.routeforge.spring.naming.RouteNamingStrategy;
 import io.github.routeforge.spring.registry.ForgeRouteRegistry;
@@ -125,6 +129,42 @@ public class ForgeAutoConfiguration {
     @ConditionalOnMissingBean
     ForgeRoutesController forgeRoutesController(ForgeRouteRegistry registry, Environment environment) {
         return new ForgeRoutesController(registry, isDebug(environment));
+    }
+
+    /**
+     * 命令行三件套（SPEC §5.1）。命令对象只依赖注册表——取数一律 {@code registry.analyze()}，
+     * 与两个 HTTP 端点共用同一套装配，杜绝「命令自己再扫一遍」的第二份口径。
+     *
+     * <p>{@link ForgeTypesCommand} 的时间戳走 {@code TypeGenerator::currentTimestamp}（宿主实跑取当下时刻）；
+     * 命令逻辑本身是可脱离 Spring 直接单测的纯对象，这里只是把它们接成 bean。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    ForgeListCommand forgeListCommand(ForgeRouteRegistry registry) {
+        return new ForgeListCommand(registry);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    ForgeTypesCommand forgeTypesCommand(ForgeRouteRegistry registry) {
+        return new ForgeTypesCommand(registry);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    ForgeClearCommand forgeClearCommand(ForgeRouteRegistry registry) {
+        return new ForgeClearCommand(registry);
+    }
+
+    /**
+     * CLI 入口：{@code --forge:*} flag 缺席即完全 no-op，因此无条件注册也安全
+     * （正常启动与不带这些参数的 {@code @SpringBootTest} 都不受影响）。命中命令后跑完 {@code System.exit}
+     * 落地退出码——这是宿主显式把它当运维命令用的语义（SPEC §5.1，宿主启服务时勿误带这些 flag）。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    ForgeCliRunner forgeCliRunner(ForgeListCommand list, ForgeTypesCommand types, ForgeClearCommand clear) {
+        return new ForgeCliRunner(list, types, clear);
     }
 
     /**

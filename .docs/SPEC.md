@@ -256,6 +256,31 @@ Spring 侧**没有「逐路由中间件」**，但有两条与 Laravel 等价的
 `--level=` `--json` `--unassigned` `--aliases` `--unnamed` `--out=`。
 严格模式违规时：list 表格照常 + 红色清单 + 退出码 1；types **不产出产物** + 清单走 stderr + 退出码 1。
 
+**执行载体与退出（Java 专属扩展）**：路由表来自 `RequestMappingHandlerMapping`，只能在 web 上下文里取到，
+因此 CLI 是宿主 web 应用里的一个 `ApplicationRunner`，**复用注册表**（`--forge:list`/`--forge:types` 走
+`ForgeRouteRegistry#analyze()`，`--forge:clear` 走 `RouteCache`），绝不在命令层再装一套 resolver/filter 重扫。
+`--forge:*` flag **缺席即完全 no-op**（正常启动与不带这些参数的 `@SpringBootTest` 不受影响）；命中命令则
+跑完 `System.exit(退出码)` 落地——所以宿主**正常启服务时勿误带这些 flag**（会被当运维命令跑完即退，与 artisan 同语义）。
+命令逻辑抽成纯对象（收已解析选项 + `out`/`err` 两个 writer → 返回退出码），退出仅在其外层薄壳，便于整文单测。
+
+**流口径（stdout = 机器可消费产物；stderr = 一切反馈）**：
+
+- 走 stdout 的只有产物本身：list 的表格文本、list `--json` 的 JSON、types 无 `--out` 时的 d.ts / JSON；
+- 走 stderr 的是所有诊断：list `--json` 的违例红色清单、types 的未知层级 / `[code] 消息` / warnings / 违例清单 /
+  `Written to:` 确认；`clear` 无产物，其状态信息走 stdout。
+- **与 PHP 的一处有意分歧**：artisan 把 `$this->error` / `Written to` 发 stdout，Java 侧统一发 stderr，
+  目的是让 stdout 恒为可安全重定向的纯产物（`--forge:list --json > x.json` 不会混进错误文本）。
+
+**产物纯净性的现实约束**：Boot 的 banner 与启动日志默认写 **stdout**，故 `--forge:types > x.d.ts` 仍会被启动期
+输出污染。因此 **`--out=` 是干净产物的推荐主路径**（写盘 UTF-8、stdout 保持空），stdout 直出仅作跨语言对等与脚本消费。
+命令写出一律显式 UTF-8（AGENTS 编码铁律，Windows GBK 会污染中文产物并造成假失败）。
+
+**形态与着色**：命令名是参数式 `--forge:xxx`（非 `route:forge:list` 这类 Artisan 命令名），属 Java 专属扩展，
+P6 的 Laravel golden 比对里别当差异查。`--json` 产物 = `json_encode(JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)`
+（核心层 `JsonWriter.pretty`）。Laravel 表格的 ANSI 着色（品红/黄/绿/红）仅存在于表格模式、非跨语言 golden 产物；
+Java 表格渲染为**纯文本对齐框、不落 ANSI**，层级/别名/撞车/未归级语义改由列文字表达。d.ts 文件头时间戳生产取
+`TypeGenerator#currentTimestamp`，做成可注入入参以便测试整文断言。
+
 ### 5.2 d.ts 生成 ⟨P4⟩
 
 `TypeGenerator` 移植自 common，输出结构逐行对齐：文件头三行注释 → `ForgeLevel` 联合 →

@@ -120,13 +120,20 @@
 - **emoji 的代理对不能直接喂 `%x`**：`String.format("%04x", Character)` 抛 IllegalFormatConversionException，
   必须显式转 int——这条是被对等测试当场抓到的，纯 Java 单测写不出来。
 
-- ⏳ **P4** CLI 三命令 `--forge:list` / `--forge:types` / `--forge:clear`：退出码、红色清单、违规是否产出产物、
-  走注册表而不是自己再扫一遍。开工前两条前置：给 `ForgeRouteRegistry` 补 `allRoutesWithTiers()` 转发
-  （`middleware` 列在 `RouteRepository` 里已有，registry 目前只透 `summary()`/`routesForLevel()`），
-  以及先读「P3 重排」末节为 P4 记下的参照事实（list 与 types 对违规的处理**刻意相反**、产物纯净性与
-  Spring Boot 日志默认写 stdout 的冲突）
+- ✅ **P4 CLI 三件套** `ForgeCliRunner`(ApplicationRunner) + 纯命令对象 `ForgeListCommand`/`ForgeTypesCommand`/`ForgeClearCommand`
+  （收 `CliOptions` + `out`/`err` 两 writer → 返回退出码，退出只在薄壳里，22 例直测喂 StringWriter 断言产物原文/退出码/流归属）：
+  走 `ForgeRouteRegistry.analyze()`（与两端点同一套 resolver/alias/filter，命令层不重装不重扫）+ `RouteCache` 失效口；
+  list 有违例照常出全表+红色清单+退 1、types 有违例**拒绝产出**（stdout 全空）+清单走 stderr+退 1（两者刻意相反，
+  变异检验「把 types 违例守卫改成永不触发」被且仅被该例抓住）；`--unnamed` 独立视图与 `--json/--unassigned/--aliases` 互斥退 1；
+  `--json` 走 `JsonWriter.pretty`；d.ts 时间戳可注入。已按「stdout=产物 / stderr=一切反馈」定死流口径（SPEC §5.1 已展开）。
+  三条拍板（用户 2026-10-07 定，均选 A）：① 载体=ApplicationRunner + flag 触发 + `System.exit`（flag 缺席即完全 no-op，
+  故正常启动/不带这些参数的 `@SpringBootTest` 不受影响）；② types 双路（stdout 直出 + 推荐 `--out=` 为干净主路径，
+  因 Boot banner/启动日志默认写 stdout 会污染重定向）；③ 不加 `forge.cli.enabled` 总开关。
+  **前置修正**：PROGRESS 原记「给 registry 补 `allRoutesWithTiers()` 转发」不准——list/types 吃的是 `analyze()`
+  （`allRoutesWithTiers()` 是 P5 管理器的数据源，本次未动、留给 P5）；本次给 registry 补的是
+  `analyze()`/`levelNames()`/`normalizedEndpointPrefix()`/`clearAllCache()`/`clearLevelCache()` 五个口。
 - ⏳ **P5** 管理器页面 + IP 白名单 + `forge-levels.yml` 写回（保存后必须失效缓存）、Redis 缓存驱动、
-  Thymeleaf 内嵌摘要、「classpath 无 Security」启动 WARN
+  Thymeleaf 内嵌摘要、「classpath 无 Security」启动 WARN、`allRoutesWithTiers()` 转发接进管理器端点
 - ⏳ **P6** 示例后端 + Vue/React 双前端 pnpm 联调 + 真实 Laravel HTTP golden 端到端对等 + maven-publish/signing
 
 ## P3 重排（2026-10-07，对着 `G:\web\php-laravel` 参照逐条核过）
@@ -255,7 +262,7 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
 
 ## 待办与后续需要拍板的点
 
-当前无阻塞项。P1 与 P2-1..P2-4 已收口（两端点与自动装配已通），下一步是 P4 命令行三件套。
+当前无阻塞项。P1、P2-1..P2-4、守卫标签第四通道、两端点/自动装配、P4 命令行三件套均已收口，下一步是 P5 管理器。
 
 进入 P5 前原有两处待定，第一处已定：
 

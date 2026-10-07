@@ -1,11 +1,13 @@
 package io.github.routeforge.spring.registry;
 
+import io.github.routeforge.core.alias.AliasResolver;
+import io.github.routeforge.core.analyzer.RouteAnalyzer;
+import io.github.routeforge.core.cache.RouteCache;
+import io.github.routeforge.core.config.LevelsConfig;
 import io.github.routeforge.core.contract.RouteSource;
 import io.github.routeforge.core.filter.RouteNameFilter;
 import io.github.routeforge.core.repository.RepositoryConfig;
 import io.github.routeforge.core.repository.RouteRepository;
-import io.github.routeforge.core.cache.RouteCache;
-import io.github.routeforge.core.config.LevelsConfig;
 import io.github.routeforge.core.support.EndpointPrefix;
 import io.github.routeforge.core.tier.RouteClassifier;
 import io.github.routeforge.core.tier.TierResolver;
@@ -62,6 +64,51 @@ public final class ForgeRouteRegistry {
     /** 层级端点产物。 */
     public Map<String, Object> routesForLevel(String level) {
         return repository().routesForLevel(level);
+    }
+
+    /**
+     * 命令行与管理器共用的分析视图：走注册表已装的 {@link TierResolver} / {@link AliasResolver} /
+     * {@link RouteNameFilter}，对 {@link RouteSource#routes()} 做一次扫描，产出结构化结果。
+     *
+     * <p>刻意<b>不</b>经过 {@link RouteRepository#infos()} 那条严格模式预扫描（它会直接抛 RF_BE_009）：
+     * 命令行的语义是「有违规也照常出全表、末尾附红色清单、退 1」，违规清单从
+     * {@link RouteAnalyzer.Analysis#violations()} 取，而不是靠抛异常中断。
+     *
+     * <p>{@code TierResolver.resolve()} 抛出的 RF_BE_002 / 004 / 006 与 {@code AliasResolver} 抛的
+     * RF_BE_008 原样向上传播（配置歧义必须中断，命令层按 {@code [code] 消息} 打一行退 1）。
+     * 缓存与此路无关：命令行是一次性诊断，每次都真扫（与 PHP 侧 {@code analyzeRoutes} 同）。
+     */
+    public RouteAnalyzer.Analysis analyze() {
+        TierResolver resolver = new TierResolver(levels, classifier, config.strictMode(), warnings);
+        AliasResolver aliasResolver = new AliasResolver(aliases, filter);
+        return new RouteAnalyzer(resolver, aliasResolver, filter).analyze(source.routes());
+    }
+
+    /** 已配置层级名（声明顺序 = last-wins 优先级 = 摘要键序）。 */
+    public List<String> levelNames() {
+        return levels.names();
+    }
+
+    /**
+     * 规范化后的端点前缀（前导 {@code /}、去尾部 {@code /}）：端点注册、摘要下发、d.ts 头注释三处同源，
+     * 命令行不自建第二份规范化规则。
+     */
+    public String normalizedEndpointPrefix() {
+        return RouteRepository.normalizeEndpointPrefix(
+                config.endpointPrefix() == null ? RouteRepository.DEFAULT_ENDPOINT_PREFIX : config.endpointPrefix());
+    }
+
+    /** 清空全部 forge 缓存（含摘要）。{@code RouteCache.clear} 不随 debug 旁路——否则关回 debug 时旧缓存复活。 */
+    public void clearAllCache() {
+        cache.clear();
+    }
+
+    /**
+     * 失效某层级缓存，并连带失效摘要（不变量封装在 {@link RouteCache#forgetLevel}：摘要的
+     * {@code route_count} 依赖层级数据）。命令行禁止直接 {@code forget}，一律走此口。
+     */
+    public void clearLevelCache(String level) {
+        cache.forgetLevel(level);
     }
 
     private RouteRepository repository() {
