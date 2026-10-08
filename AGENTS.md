@@ -32,8 +32,9 @@ export GRADLE_USER_HOME="$PWD/.gradle"        # 或每条命令前置 GRADLE_USE
 - 镜像加速：`<项目根>/.gradle/init.d/cn-mirrors.gradle.kts`（依赖走腾讯、插件走阿里云、官方源兜底）。
   它在 gitignore 内，**不进仓库**；`settings.gradle.kts` 只声明 mavenCentral，保证 CI 与他人 clone 可复现。
 - 因此本项目的构建只在指定 `GRADLE_USER_HOME` 时才吃到镜像与本地缓存；不指定则回落到用户目录的缓存，功能不受影响。
-- JDK：基线 Java 21（`options.release` 锁定，不用 toolchain 自动下载）。⟨已拍板待落地⟩基线降到 17 + 支持边界口径，
-  见 `.docs/PROGRESS.md`「待办」第 3 条；改之前这里描述的仍是现状。
+- JDK：基线 Java 17（`options.release` 锁定，不用 toolchain 自动下载；产物 class major=61，由 `BuildConventionTest`
+  读自身 class 头钉死）。支持边界：tested on Boot 4.x，Boot 3.5+ 物理兼容但 untested（`compileBoot35SentinelJava` 只证明
+  可编译，不许据此写成「支持 Boot 3」），Boot 2 及以下明确排除。口径与四件改动见 `.docs/SPEC.md` §8.1 与 PROGRESS 已落地记录。
 - 编码：全仓 UTF-8 强制（`-Dfile.encoding` / `stdout.encoding`）。断言与 fixture 含中文，Windows GBK 会造成假失败。
 - `-parameters` 全仓强制：`@ConfigurationProperties` 构造绑定依赖它，丢了要到运行期才炸，故由 `BuildConventionTest` 把守。
 

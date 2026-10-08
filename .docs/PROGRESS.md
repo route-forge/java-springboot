@@ -9,9 +9,9 @@
 |---|---|
 | 能力范围 | v1 全量对等 SPEC（含管理器页面与 d.ts 生成） |
 | 交付形态 | 双模块库（`forge-core` + `forge-spring-boot-starter`）+ 示例后端 + Vue3/React 双前端 |
-| 语言/构建 | Java 17 基线（`options.release` 锁定，不用 toolchain 自动下载）+ Gradle Kotlin DSL + wrapper 9.7.0-all。⟨待落地⟩**现状仍是 21**，代码已实证零 Java 18-21 语法/API，改一行即可；理由与连带面见「待办」第 3 条 |
+| 语言/构建 | Java 17 基线（`options.release` 锁定，不用 toolchain 自动下载）+ Gradle Kotlin DSL + wrapper 9.7.0-all。✅ 已落地（2026-10-08）：`release=21→17`、删 catalog 死配置 `java="21"`、`BuildConventionTest` 改读自身 class major=61（实证零 Java 18-21 语法/API，改动即通过） |
 | Spring 基线 | 编译与测试用 Spring Boot 4.1.1（2026-10 最新稳定；4.2.0 仅 milestone） |
-| 支持边界 | 承诺 **tested on Boot 4.x**；Boot 3.5+ **物理兼容但不承诺**（不跑测试、SPEC 不写「支持」）；Boot 2 及以下**明确排除**。2026-10-07 拍板，⟨待落地⟩ |
+| 支持边界 | 承诺 **tested on Boot 4.x**；Boot 3.5+ **物理兼容但不承诺**（不跑测试、SPEC 不写「支持」）；Boot 2 及以下**明确排除**。2026-10-07 拍板，✅ 2026-10-08 已落地（SPEC §8.1 三行口径 + 编译哨兵，实测 Boot 3.5.16=FW 6.2.19） |
 | 坐标 | group `io.github.route-forge`（对应 GitHub org），artifact `forge-core` / `forge-spring-boot-starter`；Java 包根 `io.github.routeforge.*`（包名不允许连字符） |
 | 命名通道 | 形态 C：`@ForgeRoute` 组合注解（meta `@RequestMapping`，全量 `@AliasFor` 透传）+ `@Forge` 副注解逃生舱 + `RouteNamingStrategy` SPI（默认关）；冲突 fail-fast = RF_BE_010 |
 | tier 继承 | 五级优先级不变：方法级 = 显式 > 类/包级 `@ForgeTier` = group 继承 > `RouteClassifier` bean > `match` > `unassigned` |
@@ -289,10 +289,8 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
 
 ## 待办与后续需要拍板的点
 
-当前无阻塞项。P1、P2-1..P2-4、守卫标签第四通道、两端点/自动装配、P4 命令行三件套均已收口，下一步是 P5 管理器。
-**唯一带时间窗口的待办是下面第 3 条（版本支持边界）**——它该在 P6 发 `1.0.0` 之前、且趁 0.x 砍版本还不要钱的时候落地。
-
-进入 P5 前原有两处待定，第一处已定：
+当前无阻塞项。P1、P2-1..P2-4、守卫标签第四通道、两端点/自动装配、P4 命令行三件套、以及带时间窗口的**版本支持边界（第 3 条，2026-10-08 已落地）**均已收口，下一步是 P5 管理器。
+进入 P5 前尚有一处待拍板（下面第 2 条：内嵌摘要是否强制绑 Thymeleaf）；第 1 条已定。
 
 1. ✅ **已定（2026-10-06，准则换成「按大多数开发者的实际写法」）**：`endpoint_middleware` **不做表达式翻译、
    也不代宿主配 Security**。实测主流写法就是自己去 `authorizeHttpRequests` 里加一行（GitHub 命中文件数
@@ -302,7 +300,22 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
    口径变更的连带面：`build.gradle.kts` 里「接 Security」的注释、以及各处提到端点保护的 javadoc，落地时一并扫。
 2. ⏳ 内嵌摘要（`@forgeSummary` 的等价物）是否强制依赖 Thymeleaf——倾向「纯 Java 渲染 API + Thymeleaf 方言片段可选」，
    不逼没有模板引擎的纯 SPA 宿主引依赖。
-3. ⏳ **版本支持边界（2026-10-07 拍板「按最省的兼容来做」，四件事一批落地，尚未动手）**
+3. ✅ **版本支持边界（2026-10-07 拍板「按最省的兼容来做」，2026-10-08 一笔 `build(starter)` 落地）**
+
+   **落地结果与两处被实测推翻的前提**（下面「四件改动」原样保留，仅记实际差异）：
+   - ✅ 四件改动全部完成：`release=21→17` + 注释交代两线口径；删 catalog 死配置 `java="21"`；starter 删 main 的
+     `compileOnly(jakarta.servlet)`；`BuildConventionTest` 改读自身 class 头 major==61；SPEC §8.1 补三行支持边界口径；
+     README×2 与 AGENTS.md 同步 Java 17。全量 `clean build --offline --rerun-tasks` 绿；`javap` 抽查 main/test 均 major 61。
+   - ⚠️ **推翻 1（原计划「test 侧 servlet 一并删」错）**：`testImplementation(jakarta.servlet.api)` **不能删**——端点契约测试里
+     MockMvc 的 `result.getResponse().getStatus()` 要编译器能解析 `MockHttpServletResponse` 的父接口
+     `HttpServletResponse`，测试源码从不写 `jakarta.servlet` 字样但类路径缺它就「无法访问 HttpServletResponse/找不到类文件」。
+     只有 **main 的 compileOnly** 那行是真死依赖（`compileJava` 不引它也过）。删它时踩了红：`compileTestJava FAILED`，改回即绿。
+   - ⚠️ **推翻 2（原计划把 Boot 3.5 记为「FW 6.1」不准）**：`compileBoot35SentinelJava` 解析出的依赖树是
+     **Boot 3.5.16 → Framework 6.2.19**（Boot 3.4/3.5 线本就随 FW 6.2，6.1 是 Boot 3.3）。哨兵注释与 SPEC 已改为 6.2；
+     「用到的 API 自 FW 6.1 起即存在」仍成立，只是**门禁只钉到实测过的 Boot 3.5.16=6.2.19**，不外扩。
+   - ✅ **哨兵非空跑（变异检验）**：往 src/main 塞一个 `Resource.getFilePath()`（FW 7.0.9 有、6.2.19 无）——主 `compileJava`
+     照常绿、哨兵 `找不到符号 getFilePath()` 变红；探针删掉后哨兵回绿。证明它真按 6.2 类路径编真源码、能咬版本差异。
+     catalog 顺带删了孤儿 `jakarta-servlet-api` 别名后又因推翻 1 恢复（现仅 test 路径引用）。
 
    **为什么现在做**：承诺支持是单向棘轮——`0.1.0` 写了「支持 Boot 3.5」，以后收回要付一个 major；写了「只支持 4.x」，
    永远不用道歉。而基线数字是另一件事，两者别捆：`release=21` 挡掉的主要人群根本不是 Boot 3 用户，而是
@@ -336,7 +349,7 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
       缺陷，属于本文件「断言必须防真空通过」那一节的同类问题。所以两条必须**同笔**提交；只改断言不降 release 会当场
       红（产物还是 65，属正常），只降 release 不改断言则静默假绿。
 
-   **哨兵的能力边界（写进它的注释，别升口径）**：它只保证「对着 FW 6.1 编得过」，**不保证运行期行为一致**。
+   **哨兵的能力边界（写进它的注释，别升口径）**：它只保证「对着 FW 6.2（Boot 3.5.16 实测映射）编得过」，**不保证运行期行为一致**。
    真正会分叉的是 `YamlShape` 依赖的 Boot Binder 索引 Map 形态（`{0=/admin}`，本仓在 Boot 4 上实测得来）——3.5 上
    未做运行验证。所以口径只能停在「物理兼容、untested」，**不许在 SPEC/README 写成「支持 Boot 3」**。
 

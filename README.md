@@ -67,8 +67,8 @@ alone the `internal` one. TypeScript declarations are generated from the same so
 
 | | |
 |---|---|
-| Java | 21 or later |
-| Spring Boot | 4.0+ (developed and tested on 4.1) |
+| Java | 17 or later |
+| Spring Boot | **tested on 4.x** (developed and tested on 4.1); Boot 3.5+ compiles but is untested and not committed; Boot 2 and below are explicitly excluded |
 | Web stack | Servlet (`spring-boot-starter-webmvc`) with a JSON message converter — **WebFlux is not supported**, the scanner reads `RequestMappingHandlerMapping` |
 | Frontend | `@route-forge/core`, `@route-forge/vue`, `@route-forge/react` ≥ 3.1.0 |
 

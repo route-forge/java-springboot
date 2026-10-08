@@ -393,7 +393,7 @@ Java 表格渲染为**纯文本对齐框、不落 ANSI**，层级/别名/撞车/
 
 | 维度 | 覆盖点 |
 |---|---|
-| 构建约定 | Java 21 基线、`-parameters`、UTF-8 默认字符集（`BuildConventionTest`，已落地） |
+| 构建约定 | Java 17 基线（产物 class major=61，由 `BuildConventionTest` 读自身 class 头钉死）、`-parameters`、UTF-8 默认字符集（已落地） |
 | 层级分配 | ⟨P1/P3⟩ 显式 / 类级包级继承 / classifier / match / 多命中取最后 / unassigned |
 | 中间件匹配 | ⟨P1⟩ any / all / DNF（越界索引、空子句、未知模式降级 any）、prefix 按段 |
 | 别名 | ⟨P1/P3⟩ 宏优先 config / 撞车忽略 / 悬空 RF_BE_008 / 跨层级铺开 / 计数不叠加 |
@@ -407,3 +407,18 @@ Java 表格渲染为**纯文本对齐框、不落 ANSI**，层级/别名/撞车/
 
 Java 适配自成一条版本线（当前 `0.1.0`），不跟随 PHP/npm 的版本号；`schemeVersion` 恒 `1`，
 只在摘要响应格式发生不兼容变更时递增。
+
+### 8.1 运行时支持边界
+
+语言基线为 **Java 17**（`options.release` 锁定；Boot 4 官方只要求 17，且 17 是 JDK 的 LTS，
+大量宿主升 Boot 不升 JDK，故基线取 17 而非 21）。Spring Boot 侧承诺如下三行，逐字为准：
+
+| 面向 | 承诺 | 依据 |
+|---|---|---|
+| **Boot 4.x** | **tested**：编译、全量测试、示例联调都跑在 4.1 上，出问题按 bug 修 | 主门禁 `./gradlew build` |
+| **Boot 3.5+** | **物理兼容、untested**：`src/main` 用到的 Spring API 自 Framework 6.1 起即存在、main 零 Jackson/servlet/Security，故 `compileBoot35SentinelJava` 能对着 **Boot 3.5.16（实测 = FW 6.2.19）** 编过——但**不跑测试、不承诺运行期行为** | Boot 3.5 编译哨兵（只证明可编译，不证明语义） |
+| **Boot 2 及以下** | **明确排除**：`javax.*` 命名空间 + 无 `AutoConfiguration`/`MergedAnnotations` 等，物理上不兼容 | —— |
+
+> 唯一会真正分叉的运行期点是 `YamlShape` 依赖的 Boot Binder「全数字键索引 Map」形态（`{0=/admin}`，
+> 本仓在 Boot 4 上实测得来），3.5 上未做运行验证。所以 3.5 那一行的口径**只能停在「物理兼容、untested」**，
+> SPEC/README 一律不得写成「支持 Boot 3」。

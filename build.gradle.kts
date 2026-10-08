@@ -15,8 +15,10 @@ subprojects {
     }
 
     tasks.withType<JavaCompile>().configureEach {
-        // Java 21 为库的公开基线（Spring Boot 4 自身要求 17+）
-        options.release.set(21)
+        // 库的公开基线 = Java 17。两条线各自的要求都落在 17：Spring Boot 4 官方只要求 Java 17
+        // （Boot 3.5 同为 17），而 17 是 JDK 的 LTS——大量宿主升了 Boot 却不升 JDK，基线取 21
+        // 挡掉的正是这批 Boot 4 + JDK 17 用户，与「支持 Boot 3 与否」无关，故单独降到 17。
+        options.release.set(17)
         options.encoding = "UTF-8"
         // @ConfigurationProperties 构造绑定、@PathVariable 名字推断都依赖参数名元数据，默认是关的
         options.compilerArgs.add("-parameters")

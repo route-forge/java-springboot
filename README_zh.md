@@ -58,8 +58,8 @@ TypeScript 声明文件由同一个真相源生成。
 
 | | |
 |---|---|
-| Java | 21 及以上 |
-| Spring Boot | 4.0 及以上（开发与测试基于 4.1） |
+| Java | 17 及以上 |
+| Spring Boot | **tested on 4.x**（开发与测试基于 4.1）；Boot 3.5+ 物理兼容但未测试、不承诺；Boot 2 及以下明确排除 |
 | Web 技术栈 | Servlet 侧（`spring-boot-starter-webmvc`）且带 JSON 消息转换器；**不支持 WebFlux**，扫描器读的是 `RequestMappingHandlerMapping` |
 | 前端 | `@route-forge/core`、`@route-forge/vue`、`@route-forge/react` ≥ 3.1.0 |
 
