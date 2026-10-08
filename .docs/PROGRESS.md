@@ -137,8 +137,15 @@
   追加键 `forge.exclude-uri-prefixes`（`c47459d`）；P3-2 注解误放提示 `ForgeAnnotationSanityChecker`
   （`500f681`）；P3-3 时机对照写进 SPEC §4.9；P3-4 钉 strict×缓存×debug 的 HTTP 面（三组上下文各加一条）。
   两条变异检验：清空内置默认 / 把误放扫描 `enabled` 改恒 true，均被对应断言当场抓红。
-- ⏳ **P5** 管理器页面 + IP 白名单 + `forge-levels.yml` 写回（保存后必须失效缓存）、Redis 缓存驱动、
-  Thymeleaf 内嵌摘要、「classpath 无 Security」启动 WARN、`allRoutesWithTiers()` 转发接进管理器端点
+- ✅ **P5-a 管理器三件套**（2026-10-08）：`ForgeManagerController`（页面 `GET /_forge/manager` 自包含 HTML +
+  `GET api/routes`（转 `allRoutesWithTiers`）+ `PUT api/config`）+ `ManagerAccessGuard`（IP 白名单，纯对象可单测）+
+  `ForgeLevelsStore`（写 `./forge-levels.yml`：备份→原子写→回读比对→失配回滚）。三道门禁 `debug∧manager.enabled∧IP`
+  （`OnManagerEnabledAndDebug` 条件 + 控制器内 guard），未开者一个 bean 都不建、零副作用。保存走**热生效**（决策 D1）：
+  `PUT` 全量覆盖 levels，落盘成功后 `registry.updateLevels` 换 volatile `LevelsConfig` + `clearAllCache`，即时重算。
+  铁律 3：`/​_forge/manager` 并入 URI 维排除（`ForgeRouteRegistry.MANAGER_URI_PREFIX` 单点，控制器 `@RequestMapping` 复用）——
+  专测钉住「管理器路由可访问却不出现在 forge 自己视图」。测：guard 单测 + 访问契约（404/404/403/排除）+ 保存回环独立上下文。
+- ⏳ **P5-b 剩余**：Redis `CacheStore` 驱动、Thymeleaf 内嵌摘要接线（§5.4，决策已定「纯 Java + 可选方言片段」）、
+  「classpath 无 Security」启动 WARN
 - ⏳ **P6** 示例后端 + Vue/React 双前端 pnpm 联调 + 真实 Laravel HTTP golden 端到端对等 + maven-publish/signing
 
 ## P3 重排（2026-10-07，对着 `G:\web\php-laravel` 参照逐条核过）—— ✅ P3-1..P3-4 全部收口
@@ -298,8 +305,9 @@ php-common 无 vendor：`bootstrap.php` 自带 PSR-4 装载与 `Psr\Log\LoggerIn
    一条链只会打架。于是 Java 侧它是纯声明值，`spring-security-*` 连 `compileOnly` 都不引——守卫注解按
    **类型全名**反射识别即可。层级标签改由第四通道从守卫注解派生，规则表与两条边界见 SPEC §4.4。
    口径变更的连带面：`build.gradle.kts` 里「接 Security」的注释、以及各处提到端点保护的 javadoc，落地时一并扫。
-2. ⏳ 内嵌摘要（`@forgeSummary` 的等价物）是否强制依赖 Thymeleaf——倾向「纯 Java 渲染 API + Thymeleaf 方言片段可选」，
-   不逼没有模板引擎的纯 SPA 宿主引依赖。
+2. ✅ **已定（2026-10-08）内嵌摘要不强制 Thymeleaf**：纯 Java 渲染 API（`SummaryRenderer` 已产 `window.__ROUTE_FORGE__`
+   自删 `<script>`、script-safe 转义，P1f 落地）为主入口；Thymeleaf 方言片段做成**可选**（`@ConditionalOnClass` 守护，
+   宿主引了才启用），不逼纯 SPA 宿主背模板引擎依赖。属 §5.4 那一步再做，不挡当前 P5 管理器主线。
 3. ✅ **版本支持边界（2026-10-07 拍板「按最省的兼容来做」，2026-10-08 一笔 `build(starter)` 落地）**
 
    **落地结果与两处被实测推翻的前提**（下面「四件改动」原样保留，仅记实际差异）：

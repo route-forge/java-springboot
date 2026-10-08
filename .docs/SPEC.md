@@ -357,11 +357,34 @@ Java 表格渲染为**纯文本对齐框、不落 ANSI**，层级/别名/撞车/
 `date('Y-m-d\TH:i:s.000\Z')`——毫秒位恒为字面量 `.000`、`Z` 为字面量、时区取进程默认；
 `--json` 在**目标层级为 0** 时顶层输出 `[]`（只有层级块做了对象强转），消费侧要能容忍 `[]` 与 `{}`。
 
-### 5.3 管理器页面 ⟨P5⟩
+### 5.3 管理器页面（已实现）
 
-`GET /_forge/manager`（HTML，零构建依赖静态页）+ `GET /_forge/manager/api/routes` +
-`PUT /_forge/manager/api/config`。双开关（`forge.manager.enabled` + 非生产 profile）+ IP 白名单。
-保存只写独立 `forge-levels.yml`（写前备份、写后回读比对），绝不改宿主 `application.yml`。
+`GET /_forge/manager`（自包含 HTML、零构建/零 CDN 依赖）+ `GET /_forge/manager/api/routes`（层级 × 路由视图，
+数据源＝`ForgeRouteRegistry#allRoutesWithTiers`）+ `PUT /_forge/manager/api/config`（保存并生效）。
+
+**三道门禁（§4.7）**：仅当 `debug=true` **且** `forge.manager.enabled=true` 时整个 `ManagerConfiguration` 才装配
+（bean 不注册、不新增 `/_forge/manager/**` 路由，故生产/未开者零副作用）；再叠加 `forge.manager.allowed-ips`
+IP 白名单（第三道，控制器内施加）。IP 经 `HttpServletRequest.getRemoteAddr()` 取——Spring MVC 无 servlet-free
+的取来源 IP 途径，而本装配是 `@ConditionalOnWebApplication(SERVLET)`，servlet-api 恒由宿主 webmvc 提供（编译期
+`compileOnly`）。`allowed-ips` 语义：`"*"` 放行任意、空列表不限制、否则命中且 IPv6 回环归一（`0:0:0:0:0:0:0:1`=`::1`）。
+**反向代理**须宿主自启 `ForwardedHeaderFilter`，否则 `getRemoteAddr()` 反映代理而非真实来源（本包不自己读 `X-Forwarded-For`，避免伪造）。
+
+**保存＝热生效（决策 D1）**：`PUT` 的 `levels` 为**全量覆盖**（非增量）。一次调用内按「写文件成功 → 换内存
+`LevelsConfig` → `clearAllCache`」次序执行，于是同进程立即按新层级重算，无需重启；次序刻意「先落盘、后换内存」，
+落盘失败绝不造成内存/文件分叉。写盘纪律三条：写前备份（`forge-levels.yml.bak`）、原子写（临时文件 + `ATOMIC_MOVE`）、
+写后回读比对，比对失配则用备份回滚并报错。
+
+**文件位置与读回（决策 D2）**：固定写工作目录 `./forge-levels.yml`，顶层 `forge: { levels: {...} }` 形态。要让重启后
+仍生效，宿主需加 `spring.config.import=optional:file:./forge-levels.yml`；**优先级 caveat**：Spring 里被 import 的
+文档优先级**低于**声明 import 的 `application.yml`，故若要保存的层级在重启后作数，须把 `forge.levels` 只放在
+`forge-levels.yml`、不要在 `application.yml` 里重复（否则重启被 `application.yml` 盖回）。热生效路径不受此影响。
+
+**错误口径**：管理器的请求/写盘错误用 HTTP 状态码 + `{"error":{"message":…}}`（400 缺 `levels`、403 白名单外、
+500 写盘失败），**不占用 `RF_BE_0xx`**——那是跨语言元信息契约的码族，管理器是 Java 侧 dev 工具。
+
+> 已知取舍（待定项，非缺口）：`api/routes` 走 `allRoutesWithTiers()`，与摘要/层级端点同为严格违例时抛 `RF_BE_009`
+> 的取数面，故**开 strict 且宿主有未命名违例时该端点会 500**——与其余端点一致，但会让「用管理器去修违例」成死循环。
+> 若要管理器在违例下仍可浏览，需另接一条容错视图（走 `analyze()`），留作后续。
 
 ### 5.4 首页内嵌摘要 ⟨P5⟩
 
@@ -416,7 +439,7 @@ Java 适配自成一条版本线（当前 `0.1.0`），不跟随 PHP/npm 的版�
 | 面向 | 承诺 | 依据 |
 |---|---|---|
 | **Boot 4.x** | **tested**：编译、全量测试、示例联调都跑在 4.1 上，出问题按 bug 修 | 主门禁 `./gradlew build` |
-| **Boot 3.5+** | **物理兼容、untested**：`src/main` 用到的 Spring API 自 Framework 6.1 起即存在、main 零 Jackson/servlet/Security，故 `compileBoot35SentinelJava` 能对着 **Boot 3.5.16（实测 = FW 6.2.19）** 编过——但**不跑测试、不承诺运行期行为** | Boot 3.5 编译哨兵（只证明可编译，不证明语义） |
+| **Boot 3.5+** | **物理兼容、untested**：`src/main` 零 Jackson、零 Security；P5 管理器引入了 `jakarta.servlet`（`HttpServletRequest.getRemoteAddr`）与 `snakeyaml`（写 `forge-levels.yml`），二者在 Boot 3.5 对应的 Servlet 6.0 / snakeyaml 上都有同样的稳定 API。故 `compileBoot35SentinelJava`（哨兵类路径已镜像 servlet-api + snakeyaml）能对着 **Boot 3.5.16（实测 = FW 6.2.19）** 编过——但**不跑测试、不承诺运行期行为** | Boot 3.5 编译哨兵（只证明可编译，不证明语义） |
 | **Boot 2 及以下** | **明确排除**：`javax.*` 命名空间 + 无 `AutoConfiguration`/`MergedAnnotations` 等，物理上不兼容 | —— |
 
 > 唯一会真正分叉的运行期点是 `YamlShape` 依赖的 Boot Binder「全数字键索引 Map」形态（`{0=/admin}`，

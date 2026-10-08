@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Route Forge 管理器</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 24px;
+           background: #f6f7f9; color: #1c1e21; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    .sub { color: #666; margin-bottom: 20px; }
+    .cols { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; align-items: start; }
+    .card { background: #fff; border: 1px solid #e3e5e8; border-radius: 8px; padding: 16px; }
+    .card h2 { font-size: 14px; margin: 0 0 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { color: #666; font-weight: 600; }
+    .tier { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 12px; background: #eef; color: #35c; }
+    .tier.unassigned { background: #fee; color: #c33; }
+    textarea { width: 100%; height: 320px; box-sizing: border-box; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+               border: 1px solid #d0d3d8; border-radius: 6px; padding: 8px; resize: vertical; }
+    button { margin-top: 10px; padding: 8px 16px; border: 0; border-radius: 6px; background: #2f6fed; color: #fff;
+             font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: default; }
+    #status { margin-top: 10px; font-size: 13px; min-height: 18px; }
+    #status.ok { color: #187; } #status.err { color: #c33; }
+    code { background: #f0f1f3; padding: 0 4px; border-radius: 3px; }
+    .empty { color: #888; padding: 12px 0; }
+  </style>
+</head>
+<body>
+  <h1>Route Forge 管理器</h1>
+  <div class="sub">仅在 <code>debug=true</code> 且 <code>forge.manager.enabled=true</code> 且来源 IP 命中白名单时可访问。</div>
+
+  <div class="cols">
+    <div class="card">
+      <h2>层级 × 路由</h2>
+      <div id="routes"><div class="empty">加载中…</div></div>
+    </div>
+    <div class="card">
+      <h2>编辑 forge.levels（保存写回 <code>forge-levels.yml</code> 并即时生效）</h2>
+      <textarea id="levels" spellcheck="false" placeholder='{ "admin": { "match": { "prefix": ["/admin"] }, "load": "lazy" } }'></textarea>
+      <div>
+        <button id="save">保存并生效</button>
+      </div>
+      <div id="status"></div>
+    </div>
+  </div>
+
+<script>
+  const base = window.location.pathname.replace(/\/$/, '');
+
+  function tierCell(t) {
+    const cls = t === 'unassigned' ? 'tier unassigned' : 'tier';
+    return '<span class="' + cls + '">' + esc(t) + '</span>';
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+
+  async function loadRoutes() {
+    try {
+      const res = await fetch(base + '/api/routes', { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) { document.getElementById('routes').innerHTML = '<div class="empty">HTTP ' + res.status + '</div>'; return; }
+      const data = await res.json();
+      const routes = (data && data.routes) || [];
+      if (!routes.length) { document.getElementById('routes').innerHTML = '<div class="empty">没有命名路由。</div>'; return; }
+      let html = '<table><thead><tr><th>层级</th><th>名称</th><th>URI</th><th>方法</th></tr></thead><tbody>';
+      for (const r of routes) {
+        const methods = (r.methods || []).join(', ');
+        html += '<tr><td>' + tierCell(r.tier || 'unassigned') + '</td><td><code>' + esc(r.name) + '</code>'
+              + (r.alias_of ? ' <span class="sub">→ ' + esc(r.alias_of) + '</span>' : '') + '</td>'
+              + '<td><code>' + esc(r.uri || '') + '</code></td><td>' + esc(methods) + '</td></tr>';
+      }
+      html += '</tbody></table>';
+      document.getElementById('routes').innerHTML = html;
+    } catch (e) {
+      document.getElementById('routes').innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+    }
+  }
+
+  async function save() {
+    const status = document.getElementById('status');
+    let levels;
+    try {
+      levels = JSON.parse(document.getElementById('levels').value || '{}');
+    } catch (e) {
+      status.className = 'err'; status.textContent = 'levels 不是合法 JSON：' + e.message; return;
+    }
+    const btn = document.getElementById('save'); btn.disabled = true; status.className = ''; status.textContent = '保存中…';
+    try {
+      const res = await fetch(base + '/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ levels })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        status.className = 'ok'; status.textContent = '已写回并生效：' + (body.level_names || []).join(', ');
+        await loadRoutes();
+      } else {
+        status.className = 'err'; status.textContent = '保存失败：' + ((body.error && body.error.message) || res.status);
+      }
+    } catch (e) {
+      status.className = 'err'; status.textContent = '请求出错：' + e.message;
+    } finally { btn.disabled = false; }
+  }
+
+  document.getElementById('save').addEventListener('click', save);
+  loadRoutes();
+</script>
+</body>
+</html>

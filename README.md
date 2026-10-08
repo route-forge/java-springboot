@@ -61,7 +61,8 @@ alone the `internal` one. TypeScript declarations are generated from the same so
 | d.ts generation | `--forge:types` emits TypeScript declarations from the same resolver the endpoints use |
 | CLI | `--forge:list` / `--forge:types` / `--forge:clear` |
 | Framework route exclusion | Built-in `{/error, /actuator}` URI exclusions, host config can only add |
-| Manager UI / Redis cache / Thymeleaf embed | **Not implemented yet** — see [What is not here yet](#what-is-not-here-yet) |
+| Manager UI | Gated by `debug` + `forge.manager.enabled` + IP whitelist; saving writes a standalone `forge-levels.yml` and hot-applies immediately |
+| Redis cache / Thymeleaf embed | **Not implemented yet** — see [What is not here yet](#what-is-not-here-yet) |
 
 ## Requirements
 
@@ -241,9 +242,8 @@ Protecting `/_forge/**` is your job: declare it in your own `authorizeHttpReques
 
 ## What is not here yet
 
-The manager web UI (with its IP allow-list) and YAML write-back, the Redis cache driver, the
-Thymeleaf summary embed, Maven Central publishing and the Vue/React end-to-end integration pass.
-The current stage list lives in [`.docs/PROGRESS.md`](.docs/PROGRESS.md).
+The Redis cache driver, the Thymeleaf summary embed, Maven Central publishing and the
+Vue/React end-to-end integration pass. The current stage list lives in [`.docs/PROGRESS.md`](.docs/PROGRESS.md).
 
 ## Documentation
 

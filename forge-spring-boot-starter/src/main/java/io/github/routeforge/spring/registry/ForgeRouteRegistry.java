@@ -50,8 +50,18 @@ public final class ForgeRouteRegistry {
      */
     private static final List<String> FRAMEWORK_URI_EXCLUSIONS = List.of("/error", "/actuator");
 
+    /**
+     * 包自身「管理器」端点的 URI 基前缀（SPEC §5.3，固定 {@code /_forge/manager}，不随 {@code endpoint_prefix} 变）。
+     *
+     * <p>它不在 {@code endpoint_prefix}（默认 {@code /_forge/routes}）之下，故必须像包自身层级端点一样显式并入
+     * URI 维排除——否则 {@code /_forge/manager/**}（控制器注册的未命名路由）在 {@code strict_mode=true} 下会被
+     * 包自己报成宿主的 {@code missing_name}、把严格模式刷满 500（AGENTS 铁律 3）。管理器未启用时这条排除空转无害。
+     * 常量单点，供 {@code ForgeManagerController} 的 {@code @RequestMapping} 复用，避免两处漂移。
+     */
+    public static final String MANAGER_URI_PREFIX = "/_forge/manager";
+
     private final RouteSource source;
-    private final LevelsConfig levels;
+    private volatile LevelsConfig levels;
     private final Map<String, Object> aliases;
     private final RepositoryConfig config;
     private final RouteCache cache;
@@ -84,6 +94,8 @@ public final class ForgeRouteRegistry {
                 ? RouteRepository.DEFAULT_ENDPOINT_PREFIX
                 : config.endpointPrefix();
         out.add(EndpointPrefix.normalize(endpoint));
+        // 包自身管理器端点（不在 endpoint_prefix 之下，须显式并入，见 MANAGER_URI_PREFIX javadoc）
+        out.add(EndpointPrefix.normalize(MANAGER_URI_PREFIX));
         FRAMEWORK_URI_EXCLUSIONS.forEach(prefix -> out.add(EndpointPrefix.normalize(prefix)));
         if (hostUriExclusions != null) {
             hostUriExclusions.stream()
@@ -124,6 +136,30 @@ public final class ForgeRouteRegistry {
     /** 已配置层级名（声明顺序 = last-wins 优先级 = 摘要键序）。 */
     public List<String> levelNames() {
         return levels.names();
+    }
+
+    /**
+     * 管理器数据源（SPEC §5.3）：全量路由 × 层级的结构化视图，转核心层
+     * {@link RouteRepository#allRoutesWithTiers()}。与两端点、命令行共用同一 filter/resolver 装配，
+     * 不在管理器侧重装第二套口径。此路经 {@link #repository()} 走缓存语义，但 {@code allRoutesWithTiers}
+     * 本身在核心层直读 {@code infos()}（含严格模式预扫描），故与 {@code analyze()} 的「不抛全表」不同——
+     * 它是「配置有严格违例时会抛 RF_BE_009」的取数面，与摘要/层级端点同规。
+     */
+    public Map<String, Object> allRoutesWithTiers() {
+        return repository().allRoutesWithTiers();
+    }
+
+    /**
+     * 热更层级定义（SPEC §5.3 决策 D1「热生效」）：把新的层级配置换成内存里的 {@link LevelsConfig} 快照。
+     *
+     * <p>只换装配持有的层级定义（{@code levels} 是 {@code volatile}，{@link #analyze()}/{@link #repository()}
+     * 每次取数都重读该字段），<b>不</b>在此清缓存——失效入口须显式，由管理器在写回文件成功后调
+     * {@link #clearAllCache()}，保证「文件写成功」与「内存换新」的先后次序可控、失败可回滚。
+     *
+     * @param normalizedLevels 已过 {@code YamlShape.levels} 归一（索引 Map→列表）的层级原始表
+     */
+    public void updateLevels(Map<String, Object> normalizedLevels) {
+        this.levels = new LevelsConfig(normalizedLevels);
     }
 
     /**

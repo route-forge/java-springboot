@@ -17,6 +17,10 @@ dependencies {
     compileOnly(libs.spring.webmvc)
     compileOnly(libs.spring.context)
     compileOnly(libs.spring.boot.autoconfigure)
+    // servlet-api：元信息端点零 servlet，但管理器（P5）要读 socket 来源 IP（HttpServletRequest.getRemoteAddr），
+    // Spring MVC 无 servlet-free 的取 IP 途径。整个自动装配是 @ConditionalOnWebApplication(SERVLET)，只有 servlet-web
+    // 应用才加载管理器类、servlet-api 恒由宿主 webmvc 提供，故 compileOnly 足够、不外泄给宿主。
+    compileOnly(libs.jakarta.servlet.api)
     compileOnly(libs.jackson.annotations)
     compileOnly(libs.slf4j.api)
 
@@ -78,6 +82,10 @@ dependencies {
     boot35Sentinel(libs.spring.webmvc)
     boot35Sentinel(libs.spring.context)
     boot35Sentinel(libs.spring.boot.autoconfigure)
+    // 管理器（P5）引用了 HttpServletRequest，哨兵要能编过就得带上 servlet-api（Boot 3.5 BOM 管理其版本）
+    boot35Sentinel(libs.jakarta.servlet.api)
+    // ForgeLevelsStore 用 snakeyaml 写 forge-levels.yml；main 的 implementation 依赖，哨兵须镜像带上
+    boot35Sentinel(libs.snakeyaml)
     boot35Sentinel(libs.slf4j.api)
     boot35Sentinel(project(":forge-core"))
 }

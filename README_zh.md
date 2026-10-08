@@ -52,7 +52,8 @@ TypeScript 声明文件由同一个真相源生成。
 | d.ts 生成 | `--forge:types` 用与端点同一套解析器产出 TypeScript 声明 |
 | 命令行 | `--forge:list` / `--forge:types` / `--forge:clear` |
 | 框架内部路由排除 | 内置 `{/error, /actuator}` 的 URI 维排除，宿主配置只能做加法 |
-| 管理器页面 / Redis 缓存 / Thymeleaf 内嵌摘要 | **尚未实现**，见[还没有的部分](#还没有的部分) |
+| 管理器页面 | `debug` + `forge.manager.enabled` + IP 白名单三道门禁；保存写回独立 `forge-levels.yml` 并即时热生效 |
+| Redis 缓存 / Thymeleaf 内嵌摘要 | **尚未实现**，见[还没有的部分](#还没有的部分) |
 
 ## 环境要求
 
@@ -219,8 +220,7 @@ GET {endpoint-prefix}/{level}   → { level, routes{...} }
 
 ## 还没有的部分
 
-管理器 Web 页面（连同 IP 白名单）与 YAML 写回、Redis 缓存驱动、Thymeleaf 内嵌摘要、
-Maven Central 发布，以及 Vue/React 的端到端联调。当前阶段清单见
+Redis 缓存驱动、Thymeleaf 内嵌摘要、Maven Central 发布，以及 Vue/React 的端到端联调。当前阶段清单见
 [`.docs/PROGRESS.md`](.docs/PROGRESS.md)。
 
 ## 文档

@@ -14,6 +14,9 @@ import io.github.routeforge.spring.cli.ForgeCliRunner;
 import io.github.routeforge.spring.cli.ForgeListCommand;
 import io.github.routeforge.spring.cli.ForgeTypesCommand;
 import io.github.routeforge.spring.config.ForgeProperties;
+import io.github.routeforge.spring.manager.ForgeLevelsStore;
+import io.github.routeforge.spring.manager.ForgeManagerController;
+import io.github.routeforge.spring.manager.ManagerAccessGuard;
 import io.github.routeforge.spring.naming.RouteNamingStrategy;
 import io.github.routeforge.spring.registry.ForgeRouteRegistry;
 import io.github.routeforge.spring.scan.ForgeAnnotationSanityChecker;
@@ -30,7 +33,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 /**
@@ -194,5 +202,52 @@ public class ForgeAutoConfiguration {
      */
     private static boolean isDebug(Environment environment) {
         return Boolean.TRUE.equals(environment.getProperty("debug", Boolean.class, false));
+    }
+
+    /**
+     * 管理器三件套的装配（SPEC §5.3）：只在 {@link OnManagerEnabledAndDebug} 命中（{@code debug=true} 且
+     * {@code forge.manager.enabled=true}）时注册。故正常生产或没显式开管理器的宿主，一个管理器 bean 都不会建、
+     * 也不新增 {@code /_forge/manager} 路由——零副作用。
+     *
+     * <p>{@link ForgeLevelsStore} 用 {@code @ConditionalOnMissingBean} 暴露替换口：测试注入指向临时目录的实例，
+     * 无需为「固定路径」（决策 D2）新增配置键。IP 白名单（第三道）在控制器内经 {@link ManagerAccessGuard} 施加。
+     */
+    @Configuration(proxyBeanMethods = false)
+    @Conditional(OnManagerEnabledAndDebug.class)
+    static class ManagerConfiguration {
+
+        @Bean
+        @ConditionalOnMissingBean
+        ForgeLevelsStore forgeLevelsStore() {
+            return ForgeLevelsStore.defaultLocation();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        ManagerAccessGuard forgeManagerAccessGuard(ForgeProperties properties) {
+            return new ManagerAccessGuard(properties.manager().allowedIps());
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        ForgeManagerController forgeManagerController(ForgeRouteRegistry registry, ForgeLevelsStore store,
+                ManagerAccessGuard guard) {
+            return new ForgeManagerController(registry, store, guard);
+        }
+    }
+
+    /**
+     * 管理器注册门禁 = {@code debug=true} 且 {@code forge.manager.enabled=true}（SPEC §4.7 的前两道；
+     * IP 白名单是第三道，落在控制器里）。任一不满足则整个 {@link ManagerConfiguration} 不生效。
+     */
+    static final class OnManagerEnabledAndDebug implements Condition {
+
+        @Override
+        public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            Environment env = context.getEnvironment();
+            boolean debug = Boolean.TRUE.equals(env.getProperty("debug", Boolean.class, false));
+            boolean enabled = Boolean.TRUE.equals(env.getProperty("forge.manager.enabled", Boolean.class, false));
+            return debug && enabled;
+        }
     }
 }
