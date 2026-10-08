@@ -80,7 +80,7 @@ Java 侧落地口径：
 | `forge.url-prefix` | `string?` | `null` | 下发给前端的 URL 前缀 |
 | `forge.endpoint-middleware` | `string[]` | `[]` | 摘要端点访问要求，**声明值**，见 §4.4 |
 | `forge.cache-ttl` | `int?` | `3600` | 统一 TTL |
-| `forge.cache-driver` | `memory`\|`redis` | `memory` | Java 侧驱动名，语义见 §4.6。**当前仅 `memory` 落地**；选 `redis` 启动即抛 `RF_BE_003`（不静默退回内存）——Redis 驱动暂缓（单实例够用，见 PROGRESS） |
+| `forge.cache-driver` | `memory`\|`redis` | `memory` | Java 侧驱动名，语义见 §4.6。`redis` 走 spring-data-redis（可选依赖，值用 JDK 序列化不引 Jackson）；classpath 缺 spring-data-redis 或无 `RedisConnectionFactory` bean 时启动即抛 `RF_BE_003`，绝不静默退回内存 |
 | `forge.strict-mode` | `bool` | `false` | 严格模式 |
 | `forge.scheme-version` | `int` | `1` | 摘要格式版本 |
 | `forge.aliases` | `map<string,string>` | `{}` | 别名：键=别名，值=真实路由名 |
@@ -452,7 +452,7 @@ Java 适配自成一条版本线（当前 `0.1.0`），不跟随 PHP/npm 的版�
 | 面向 | 承诺 | 依据 |
 |---|---|---|
 | **Boot 4.x** | **tested**：编译、全量测试、示例联调都跑在 4.1 上，出问题按 bug 修 | 主门禁 `./gradlew build` |
-| **Boot 3.5+** | **物理兼容、untested**：`src/main` 零 Jackson、零 Security；P5 引入了 `jakarta.servlet`（`HttpServletRequest.getRemoteAddr`）、`snakeyaml`（写 `forge-levels.yml`）、可选 `thymeleaf`（内嵌摘要方言，只用核心 dialect SPI），这些在 Boot 3.5 对应版本上都有同样的稳定 API。故 `compileBoot35SentinelJava`（哨兵类路径逐一镜像 `src/main` 的 compile/impl 依赖）能对着 **Boot 3.5.16（实测 = FW 6.2.19）** 编过——但**不跑测试、不承诺运行期行为** | Boot 3.5 编译哨兵（只证明可编译，不证明语义） |
+| **Boot 3.5+** | **物理兼容、untested**：`src/main` 零 Jackson、零 Security；P5 引入了 `jakarta.servlet`（`getRemoteAddr`）、`snakeyaml`（写 yml）、可选 `thymeleaf`（内嵌摘要方言）、可选 `spring-data-redis`（Redis 缓存驱动），这些在 Boot 3.5 对应版本上都有同样的稳定 API。故 `compileBoot35SentinelJava`（哨兵类路径逐一镜像 `src/main` 的 compile/impl 依赖）能对着 **Boot 3.5.16（实测 = FW 6.2.19）** 编过——但**不跑测试、不承诺运行期行为** | Boot 3.5 编译哨兵（只证明可编译，不证明语义） |
 | **Boot 2 及以下** | **明确排除**：`javax.*` 命名空间 + 无 `AutoConfiguration`/`MergedAnnotations` 等，物理上不兼容 | —— |
 
 > 唯一会真正分叉的运行期点是 `YamlShape` 依赖的 Boot Binder「全数字键索引 Map」形态（`{0=/admin}`，

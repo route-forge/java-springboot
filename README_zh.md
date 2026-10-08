@@ -48,13 +48,12 @@ TypeScript 声明文件由同一个真相源生成。
 | URI 归一化 | 剥离 Spring 正则约束（`{id:\d+}` → `{id}`），可选段输出为 `{page?}` |
 | 别名 | 对外稳定名指向真实路由，可写在路由上也可写在配置里 |
 | 严格模式 | 层级问题聚合成一份报告；违规明细只在 `debug=true` 时下发 |
-| 缓存 | 可插拔 `CacheStore` SPI（服务提供者接口），含 TTL、按层级失效、`debug` 旁路；内置内存驱动 |
+| 缓存 | 可插拔 `CacheStore` SPI（服务提供者接口），含 TTL、按层级失效、`debug` 旁路；内置内存驱动，可选 Redis 驱动（多实例共享，值走 JDK 序列化） |
 | d.ts 生成 | `--forge:types` 用与端点同一套解析器产出 TypeScript 声明 |
 | 命令行 | `--forge:list` / `--forge:types` / `--forge:clear` |
 | 框架内部路由排除 | 内置 `{/error, /actuator}` 的 URI 维排除，宿主配置只能做加法 |
 | 管理器页面 | `debug` + `forge.manager.enabled` + IP 白名单三道门禁；保存写回独立 `forge-levels.yml` 并即时热生效 |
 | 首页内嵌摘要 | `ForgeSummaryEmbed` 纯 Java API 产出 `window.__ROUTE_FORGE__` 脚本；Thymeleaf 方言可选（无依赖也能用） |
-| Redis 缓存驱动 | **尚未实现**，见[还没有的部分](#还没有的部分) |
 
 ## 环境要求
 
@@ -221,7 +220,7 @@ GET {endpoint-prefix}/{level}   → { level, routes{...} }
 
 ## 还没有的部分
 
-Redis 缓存驱动（暂缓，单实例够用）、Maven Central 发布，以及 Vue/React 的端到端联调。当前阶段清单见
+Maven Central 发布，以及 Vue/React 的端到端联调。当前阶段清单见
 [`.docs/PROGRESS.md`](.docs/PROGRESS.md)。
 
 ## 文档

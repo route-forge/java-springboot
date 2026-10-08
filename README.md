@@ -57,13 +57,12 @@ alone the `internal` one. TypeScript declarations are generated from the same so
 | URI normalization | Spring regex constraints stripped (`{id:\d+}` → `{id}`), optional segments emitted as `{page?}` |
 | Aliases | Stable public names pointing at real routes, declared on the route or in config |
 | Strict mode | All tier problems aggregated into one report; violations only served when `debug=true` |
-| Caching | Pluggable `CacheStore` SPI with TTL, per-tier invalidation and `debug` bypass; in-memory driver |
+| Caching | Pluggable `CacheStore` SPI with TTL, per-tier invalidation and `debug` bypass; in-memory driver, optional Redis driver (shared across instances, JDK-serialized values) |
 | d.ts generation | `--forge:types` emits TypeScript declarations from the same resolver the endpoints use |
 | CLI | `--forge:list` / `--forge:types` / `--forge:clear` |
 | Framework route exclusion | Built-in `{/error, /actuator}` URI exclusions, host config can only add |
 | Manager UI | Gated by `debug` + `forge.manager.enabled` + IP whitelist; saving writes a standalone `forge-levels.yml` and hot-applies immediately |
 | Embedded summary | `ForgeSummaryEmbed` pure-Java API emits the `window.__ROUTE_FORGE__` script; optional Thymeleaf dialect (works without the dependency too) |
-| Redis cache driver | **Not implemented yet** — see [What is not here yet](#what-is-not-here-yet) |
 
 ## Requirements
 
@@ -243,8 +242,7 @@ Protecting `/_forge/**` is your job: declare it in your own `authorizeHttpReques
 
 ## What is not here yet
 
-The Redis cache driver (deferred — fine for single-instance), Maven Central publishing and the
-Vue/React end-to-end integration pass. The current stage list lives in [`.docs/PROGRESS.md`](.docs/PROGRESS.md).
+Maven Central publishing and the Vue/React end-to-end integration pass. The current stage list lives in [`.docs/PROGRESS.md`](.docs/PROGRESS.md).
 
 ## Documentation
 

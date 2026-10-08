@@ -60,6 +60,8 @@ dependencies {
     testImplementation(libs.jakarta.annotation.api)
     // 内嵌摘要方言测试要真渲染一个 Thymeleaf 模板，验证 th:utext 原样输出 <script>
     testImplementation(libs.thymeleaf)
+    // Redis 驱动测试用 Mockito 替身 RedisTemplate/ValueOperations，验证 get/put/expire/delete 与 TTL 归一
+    testImplementation(libs.spring.data.redis)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
@@ -93,6 +95,8 @@ dependencies {
     boot35Sentinel(libs.snakeyaml)
     // ForgeSummaryDialect 用核心 thymeleaf dialect SPI；main 的 compileOnly 依赖，哨兵同样须镜像
     boot35Sentinel(libs.thymeleaf)
+    // RedisCacheStore 用 spring-data-redis；main 的 compileOnly 依赖，哨兵同样须镜像
+    boot35Sentinel(libs.spring.data.redis)
     boot35Sentinel(libs.slf4j.api)
     boot35Sentinel(project(":forge-core"))
 }

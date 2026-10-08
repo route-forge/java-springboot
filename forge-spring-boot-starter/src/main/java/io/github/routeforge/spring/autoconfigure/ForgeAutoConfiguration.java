@@ -9,6 +9,7 @@ import io.github.routeforge.core.repository.RepositoryConfig;
 import io.github.routeforge.core.support.WarningSink;
 import io.github.routeforge.core.tier.RouteClassifier;
 import io.github.routeforge.spring.cache.InMemoryCacheStore;
+import io.github.routeforge.spring.cache.RedisCacheStore;
 import io.github.routeforge.spring.cli.ForgeClearCommand;
 import io.github.routeforge.spring.cli.ForgeCliRunner;
 import io.github.routeforge.spring.cli.ForgeListCommand;
@@ -36,6 +37,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Condition;
 import org.springframework.context.annotation.ConditionContext;
@@ -43,6 +45,7 @@ import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.core.type.AnnotatedTypeMetadata;
+import org.springframework.util.ClassUtils;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 /**
@@ -66,20 +69,38 @@ public class ForgeAutoConfiguration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ForgeAutoConfiguration.class);
 
+    /** spring-data-redis 是否在场的光标类（仅作字符串探针，绝不据此加载 Redis 类型）。 */
+    private static final String REDIS_PROBE = "org.springframework.data.redis.connection.RedisConnectionFactory";
+
     /**
-     * 内存缓存驱动（默认）。
+     * 缓存驱动选择（SPEC §4.6 / §6 RF_BE_003）：
+     * <ul>
+     *   <li>{@code memory}（默认）→ {@link InMemoryCacheStore}；</li>
+     *   <li>{@code redis} → classpath 有 spring-data-redis 时走 {@link RedisCacheStore}；缺依赖即抛 {@code RF_BE_003}，
+     *       有依赖但容器无 {@code RedisConnectionFactory} bean 时由 {@link RedisCacheStore#from} 抛 {@code RF_BE_003}；</li>
+     *   <li>其它值 → 抛 {@code RF_BE_003}。</li>
+     * </ul>
+     * 一律「配了却不可用即失败」，<b>绝不静默退回内存</b>——否则宿主误以为吃到了 Redis 的多实例共享。
      *
-     * <p>{@code cache-driver} 只认 {@code memory}；配成别的值时启动即失败，而不是悄悄退回内存——
-     * 静默降级会让宿主以为已经吃到 Redis 的多实例共享。
+     * <p>Redis 符号只在 {@code redis} 分支被触碰：前置 {@code ClassUtils.isPresent} 守卫（探针是字符串常量，不加载类），
+     * 通过后惰性 {@link RedisCacheStore#from}——未引 spring-data-redis 的宿主装配本 bean 时不会去解析任何 Redis 类型。
      */
     @Bean
     @ConditionalOnMissingBean(CacheStore.class)
-    CacheStore forgeCacheStore(ForgeProperties properties) {
-        if (!"memory".equals(properties.cacheDriver())) {
-            throw new CacheDriverException("Unsupported forge.cache-driver [" + properties.cacheDriver()
-                    + "]; supported drivers: memory.");
+    CacheStore forgeCacheStore(ForgeProperties properties, ApplicationContext context) {
+        String driver = properties.cacheDriver();
+        if ("memory".equals(driver)) {
+            return new InMemoryCacheStore();
         }
-        return new InMemoryCacheStore();
+        if ("redis".equals(driver)) {
+            if (!ClassUtils.isPresent(REDIS_PROBE, getClass().getClassLoader())) {
+                throw new CacheDriverException("forge.cache-driver=redis 但 classpath 上没有 spring-data-redis（"
+                        + REDIS_PROBE + " 缺失）；请引入 spring-boot-starter-data-redis（Redis 不静默退回内存）");
+            }
+            return RedisCacheStore.from(context);
+        }
+        throw new CacheDriverException("Unsupported forge.cache-driver [" + driver
+                + "]; supported drivers: memory, redis.");
     }
 
     /**
