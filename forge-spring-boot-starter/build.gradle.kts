@@ -28,6 +28,9 @@ dependencies {
     // Security **不在此列**：本包不注册、不改写宿主的 SecurityFilterChain（SPEC §4.4 铁律 3），
     // 守卫注解只按类型全名反射识别，因此 main 侧零 Security 依赖；测试才引真注解做断言。
     compileOnly(libs.spring.data.redis)
+    // 内嵌摘要的可选 Thymeleaf 方言（SPEC §5.4）：只用核心 dialect SPI，compileOnly、不引传递；无 Thymeleaf 的
+    // 宿主走 @ConditionalOnClass 跳过，纯 Java 的 ForgeSummaryEmbed 仍可注入。
+    compileOnly(libs.thymeleaf)
     // 管理器写回 forge-levels.yml 用：YAML 产物的正确性不能靠手写字符串赌，
     // 且 Boot 应用本身已带同一版本（由 BOM 裁决），实际不增加传递负担。
     implementation(libs.snakeyaml)
@@ -55,6 +58,8 @@ dependencies {
     // 守卫标签派生：对着真实注解跑（库本体零 Security 依赖，见上方 compileOnly 注释）
     testImplementation(libs.spring.security.core)
     testImplementation(libs.jakarta.annotation.api)
+    // 内嵌摘要方言测试要真渲染一个 Thymeleaf 模板，验证 th:utext 原样输出 <script>
+    testImplementation(libs.thymeleaf)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
@@ -86,6 +91,8 @@ dependencies {
     boot35Sentinel(libs.jakarta.servlet.api)
     // ForgeLevelsStore 用 snakeyaml 写 forge-levels.yml；main 的 implementation 依赖，哨兵须镜像带上
     boot35Sentinel(libs.snakeyaml)
+    // ForgeSummaryDialect 用核心 thymeleaf dialect SPI；main 的 compileOnly 依赖，哨兵同样须镜像
+    boot35Sentinel(libs.thymeleaf)
     boot35Sentinel(libs.slf4j.api)
     boot35Sentinel(project(":forge-core"))
 }

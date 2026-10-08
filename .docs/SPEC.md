@@ -80,7 +80,7 @@ Java 侧落地口径：
 | `forge.url-prefix` | `string?` | `null` | 下发给前端的 URL 前缀 |
 | `forge.endpoint-middleware` | `string[]` | `[]` | 摘要端点访问要求，**声明值**，见 §4.4 |
 | `forge.cache-ttl` | `int?` | `3600` | 统一 TTL |
-| `forge.cache-driver` | `memory`\|`redis` | `memory` | Java 侧驱动名，语义见 §4.6 |
+| `forge.cache-driver` | `memory`\|`redis` | `memory` | Java 侧驱动名，语义见 §4.6。**当前仅 `memory` 落地**；选 `redis` 启动即抛 `RF_BE_003`（不静默退回内存）——Redis 驱动暂缓（单实例够用，见 PROGRESS） |
 | `forge.strict-mode` | `bool` | `false` | 严格模式 |
 | `forge.scheme-version` | `int` | `1` | 摘要格式版本 |
 | `forge.aliases` | `map<string,string>` | `{}` | 别名：键=别名，值=真实路由名 |
@@ -387,10 +387,22 @@ IP 白名单（第三道，控制器内施加）。IP 经 `HttpServletRequest.ge
 > 的取数面，故**开 strict 且宿主有未命名违例时该端点会 500**——与其余端点一致，但会让「用管理器去修违例」成死循环。
 > 若要管理器在违例下仍可浏览，需另接一条容错视图（走 `analyze()`），留作后续。
 
-### 5.4 首页内嵌摘要 ⟨P5⟩
+### 5.4 首页内嵌摘要（已实现）
 
-`ForgeSummaryRenderer#html()` 产出 `<script>`（`window.__ROUTE_FORGE__` 一次性自删访问器，JSON 做 script-safe
-转义）+ Thymeleaf 方言片段。与摘要端点同一 producer、复用同一缓存。
+核心层 `SummaryRenderer#render(Object)`（`forge-core`，P1f 落地）产出可直接放进 HTML `<head>` 的一段
+`<script>`（`window.__ROUTE_FORGE__` 一次性自删访问器，JSON 过 `JsonWriter`+`JsSafeEncoder` 两层安全编码）。
+适配层把它包成**框架无关的纯 Java API**：`ForgeSummaryEmbed#script()`（bean，注入即用），摘要只来自
+`registry.summary()`——与摘要端点同一 producer、复用同一 `RouteCache`（缓存 / `debug` 旁路 / 包自身排除全继承）。
+
+**宿主用法（必须原样输出、不得二次转义）**：
+- 任意栈：注入 `ForgeSummaryEmbed` bean，取 `script()` 走非转义通道写进响应；
+- Thymeleaf（可选方言）：classpath 有 Thymeleaf 时 `ThymeleafSummaryConfiguration`（`@ConditionalOnClass`）注册
+  `ForgeSummaryDialect`，模板里 `<div th:utext="${#forgeSummary.summary}"></div>`（`th:utext`＝unescaped）；
+  没引 thymeleaf 依赖也能用 Bean 引用 `th:utext="${@forgeSummaryEmbed.script()}"`。
+
+`thymeleaf` 仅 `compileOnly`（只用核心 dialect SPI，不引 thymeleaf-spring；Boot 自动把 classpath 上任意 `IDialect`
+bean 收进宿主 TemplateEngine），纯 SPA 宿主零依赖负担。安全边界如实：一次性自删只缩小运行时驻留面，摘要仍随 HTML
+源码可见，非抗 XSS/抗窃取硬边界；且 `strict-mode` 有违例时与端点同规抛 `RF_BE_009`（不静默降级）。
 
 ## 6. 错误码
 
@@ -440,7 +452,7 @@ Java 适配自成一条版本线（当前 `0.1.0`），不跟随 PHP/npm 的版�
 | 面向 | 承诺 | 依据 |
 |---|---|---|
 | **Boot 4.x** | **tested**：编译、全量测试、示例联调都跑在 4.1 上，出问题按 bug 修 | 主门禁 `./gradlew build` |
-| **Boot 3.5+** | **物理兼容、untested**：`src/main` 零 Jackson、零 Security；P5 管理器引入了 `jakarta.servlet`（`HttpServletRequest.getRemoteAddr`）与 `snakeyaml`（写 `forge-levels.yml`），二者在 Boot 3.5 对应的 Servlet 6.0 / snakeyaml 上都有同样的稳定 API。故 `compileBoot35SentinelJava`（哨兵类路径已镜像 servlet-api + snakeyaml）能对着 **Boot 3.5.16（实测 = FW 6.2.19）** 编过——但**不跑测试、不承诺运行期行为** | Boot 3.5 编译哨兵（只证明可编译，不证明语义） |
+| **Boot 3.5+** | **物理兼容、untested**：`src/main` 零 Jackson、零 Security；P5 引入了 `jakarta.servlet`（`HttpServletRequest.getRemoteAddr`）、`snakeyaml`（写 `forge-levels.yml`）、可选 `thymeleaf`（内嵌摘要方言，只用核心 dialect SPI），这些在 Boot 3.5 对应版本上都有同样的稳定 API。故 `compileBoot35SentinelJava`（哨兵类路径逐一镜像 `src/main` 的 compile/impl 依赖）能对着 **Boot 3.5.16（实测 = FW 6.2.19）** 编过——但**不跑测试、不承诺运行期行为** | Boot 3.5 编译哨兵（只证明可编译，不证明语义） |
 | **Boot 2 及以下** | **明确排除**：`javax.*` 命名空间 + 无 `AutoConfiguration`/`MergedAnnotations` 等，物理上不兼容 | —— |
 
 > 唯一会真正分叉的运行期点是 `YamlShape` 依赖的 Boot Binder「全数字键索引 Map」形态（`{0=/admin}`，

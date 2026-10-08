@@ -27,6 +27,9 @@ slf4j-api = { module = "org.slf4j:slf4j-api" }
 
 # --- 可选能力：classpath 上有则启用，无则降级 ---
 spring-data-redis = { module = "org.springframework.data:spring-data-redis" }
+# 内嵌摘要的可选 Thymeleaf 方言（SPEC §5.4）：只用核心 thymeleaf API（dialect SPI），compileOnly、不引传递；
+# Boot 会把 classpath 上任何 IDialect bean 自动注册进宿主的 TemplateEngine。
+thymeleaf = { module = "org.thymeleaf:thymeleaf" }
 # 管理器写回 forge-levels.yml 用；Boot 应用本身已带同一版本，实际不增加传递负担
 snakeyaml = { module = "org.yaml:snakeyaml" }
 

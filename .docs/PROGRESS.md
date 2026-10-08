@@ -147,7 +147,11 @@
 - ✅ **P5-b1 「classpath 无 Security」启动 WARN**（2026-10-08）：`ForgeSecurityAdvisory`（探针
   `org.springframework.security.web.SecurityFilterChain`、`ClassLoader` 可注入故可脱容器单测），autoconfig 里
   一个 bean 探测一次、缺则 `LOGGER.warn` 点名 {@code /_forge/**} 无鉴权，**绝不改变行为**（本包不代配 Security）；3 例单测。
-- ⏳ **P5-b2 剩余**：Redis `CacheStore` 驱动、Thymeleaf 内嵌摘要接线（§5.4，决策已定「纯 Java + 可选方言片段」）
+- ✅ **P5-b2 首页内嵌摘要**（2026-10-08）：`ForgeSummaryEmbed`（纯 Java API，`script()`＝核心 `SummaryRenderer.render(registry.summary())`，与端点同 producer、复用同一缓存）
+  + `ForgeSummaryDialect`（可选 Thymeleaf，`#forgeSummary.summary` 经 `th:utext` 原样输出；`@ConditionalOnClass(org.thymeleaf.TemplateEngine)` 门）。
+  `thymeleaf` 仅 `compileOnly`（只用核心 dialect SPI，Boot 自动收 `IDialect` bean）；哨兵类路径镜像之。4 例测：embed 逐字等于核心渲染 / 输出未转义；方言 bean 注册 / 真渲染 raw `<script>`。
+  踩点：Thymeleaf 表达式对象按 **注册名** 访问（`#forgeSummary` = 工厂 buildObject 返回的对象），非 `方言名.对象名`；故 buildObject 返回带 `getSummary()` 的包装对象，模板 `#forgeSummary.summary` 才成立（`AbstractDialect(name)` 构造、`getName()` final、工厂要 `getAllExpressionObjectNames/buildObject/isCacheable` 三法——均 javap 实测得来）。
+- ⏳ **P5-b3 Redis `CacheStore` 驱动**：用户 2026-10-08 决定**暂缓**（单实例够用；多实例共享才需要）。现状诚实：`cache-driver=redis` 启动即抛 `RF_BE_003`（不静默退回内存）、SPEC §3 已标未实现。将来做时的约束：值序列化用 **JdkSerializationRedisSerializer**（spring-data-redis 自带，类型自持，**勿引 Jackson** 否则重开 Boot4 Jackson3 断层）、经 `@ConditionalOnClass`/`ObjectProvider` 取 `RedisConnectionFactory`（无 redis 依赖则 `RF_BE_003`）、mock `RedisTemplate` 测（本机无 Redis 服务，不做 live IT）。
 - ⏳ **P6** 示例后端 + Vue/React 双前端 pnpm 联调 + 真实 Laravel HTTP golden 端到端对等 + maven-publish/signing
 
 ## P3 重排（2026-10-07，对着 `G:\web\php-laravel` 参照逐条核过）—— ✅ P3-1..P3-4 全部收口

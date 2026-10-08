@@ -21,6 +21,8 @@ import io.github.routeforge.spring.naming.RouteNamingStrategy;
 import io.github.routeforge.spring.registry.ForgeRouteRegistry;
 import io.github.routeforge.spring.scan.ForgeAnnotationSanityChecker;
 import io.github.routeforge.spring.scan.HandlerMethodRouteSource;
+import io.github.routeforge.spring.summary.ForgeSummaryEmbed;
+import io.github.routeforge.spring.summary.ForgeSummaryDialect;
 import io.github.routeforge.spring.support.ForgeSecurityAdvisory;
 import io.github.routeforge.spring.support.Slf4jWarningSink;
 import io.github.routeforge.spring.web.ForgeRoutesController;
@@ -30,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -156,6 +159,16 @@ public class ForgeAutoConfiguration {
     }
 
     /**
+     * 内嵌摘要的框架无关渲染 API（SPEC §5.4）：任何模板/Servlet 都能注入它拿 {@code <script>}，
+     * 无需引模板引擎。摘要只走 {@link ForgeRouteRegistry#summary()}，与端点共用同一缓存/旁路/排除语义。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    ForgeSummaryEmbed forgeSummaryEmbed(ForgeRouteRegistry registry) {
+        return new ForgeSummaryEmbed(registry);
+    }
+
+    /**
      * 命令行三件套（SPEC §5.1）。命令对象只依赖注册表——取数一律 {@code registry.analyze()}，
      * 与两个 HTTP 端点共用同一套装配，杜绝「命令自己再扫一遍」的第二份口径。
      *
@@ -261,6 +274,23 @@ public class ForgeAutoConfiguration {
             boolean debug = Boolean.TRUE.equals(env.getProperty("debug", Boolean.class, false));
             boolean enabled = Boolean.TRUE.equals(env.getProperty("forge.manager.enabled", Boolean.class, false));
             return debug && enabled;
+        }
+    }
+
+    /**
+     * 内嵌摘要的<b>可选</b> Thymeleaf 方言（SPEC §5.4）。只在 classpath 有 Thymeleaf 时装配（{@code @ConditionalOnClass}
+     * 用字符串名，避免没有 Thymeleaf 的宿主去加载引用了 thymeleaf 类型的配置类）；此时注册的 {@code IDialect} bean
+     * 会被 Boot 的 Thymeleaf 自动配置收进 TemplateEngine。纯 SPA/无模板宿主此块整体不生效，{@link ForgeSummaryEmbed}
+     * 仍可用（Bean 引用 {@code ${@forgeSummaryEmbed.script()}} 或直接注入）。
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = "org.thymeleaf.TemplateEngine")
+    static class ThymeleafSummaryConfiguration {
+
+        @Bean
+        @ConditionalOnMissingBean
+        ForgeSummaryDialect forgeSummaryDialect(ForgeSummaryEmbed embed) {
+            return new ForgeSummaryDialect(embed);
         }
     }
 }
