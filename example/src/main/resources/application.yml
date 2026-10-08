@@ -1,0 +1,29 @@
+# Route Forge 示例后端配置。层级键按 Spring 形态写（前缀带前导斜杠），与下发的 uri 同一形态。
+spring:
+  application:
+    name: route-forge-example
+
+forge:
+  # 严格模式关：未命名/未归级路由不阻断启动（示例里所有路由都已命名/归级）
+  strict-mode: false
+  cache-driver: memory
+  levels:
+    admin:
+      description: 系统管理接口
+      load: lazy
+      match:
+        prefix:
+          - /admin
+    client:
+      description: 客户端接口
+      load: eager
+      match:
+        prefix:
+          - /client
+    # manage 层级完全靠 match.prefix 归级——ExampleApplication.ManageController 没写 tier
+    manage:
+      description: 运营接口
+      load: lazy
+      match:
+        prefix:
+          - /manage

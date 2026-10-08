@@ -35,6 +35,8 @@ snakeyaml = { module = "org.yaml:snakeyaml" }
 
 # --- 测试 ---
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+# --- 示例后端（P6）：真实 Boot 应用宿主，验证 starter 端到端可接入 ---
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
 # Boot 4 把按技术栈拆分的测试自动配置拆成了独立模块：@AutoConfigureMockMvc 在
 # org.springframework.boot.webmvc.test.autoconfigure（artifact: spring-boot-webmvc-test），
 # starter-test 不再自带——端点契约测试必须要它，否则只能起真端口跑集成测试。

@@ -20,3 +20,5 @@ dependencyResolutionManagement {
 
 include("forge-core")
 include("forge-spring-boot-starter")
+// 示例后端：演示接入 + 后续 Vue/React 前端联调与 Laravel golden 端到端对等的宿主
+include("example")
