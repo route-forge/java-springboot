@@ -21,6 +21,7 @@ import io.github.routeforge.spring.naming.RouteNamingStrategy;
 import io.github.routeforge.spring.registry.ForgeRouteRegistry;
 import io.github.routeforge.spring.scan.ForgeAnnotationSanityChecker;
 import io.github.routeforge.spring.scan.HandlerMethodRouteSource;
+import io.github.routeforge.spring.support.ForgeSecurityAdvisory;
 import io.github.routeforge.spring.support.Slf4jWarningSink;
 import io.github.routeforge.spring.web.ForgeRoutesController;
 import java.util.List;
@@ -100,6 +101,18 @@ public class ForgeAutoConfiguration {
     @ConditionalOnMissingBean(WarningSink.class)
     WarningSink forgeWarningSink() {
         return new Slf4jWarningSink();
+    }
+
+    /**
+     * 「classpath 无 Spring Security」启动提醒（SPEC §4.4）：检测到缺 {@code SecurityFilterChain} 能力时打一条
+     * WARN，明示 {@code /_forge/**}（含管理器）当前无鉴权保护。只探测一次、绝不改变任何行为（本包不代配 Security）。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    ForgeSecurityAdvisory forgeSecurityAdvisory() {
+        ForgeSecurityAdvisory advisory = ForgeSecurityAdvisory.detect(getClass().getClassLoader());
+        advisory.warningMessage().ifPresent(LOGGER::warn);
+        return advisory;
     }
 
     /** 路由来源：宿主可能有多份 {@code RequestMappingHandlerMapping}，一并纳入。 */

@@ -189,7 +189,8 @@ Spring 侧**没有「逐路由中间件」**，但有两条与 Laravel 等价的
 4. **与 PHP 侧的实质差异（必须记，不许静默分叉）**：`forge.endpoint-middleware` 在 Laravel 侧是真的挂到
    路由上生效，Java 侧**只作声明值**——接受、按原样出现在配置产物里、不静默丢弃，但**不产生任何行为**。
    因此 Java 侧不引 `spring-security-*` 依赖（连 `compileOnly` 都不需要，注解按名字识别）。
-   P5 唯一相关的动作是：classpath 上没有 Security 时启动打一条 WARN，明示 `/_forge/*` 端点当前无鉴权保护。
+   P5 唯一相关的动作是：classpath 上没有 Security 时启动打一条 WARN，明示 `/_forge/*` 端点当前无鉴权保护
+   （✅ 已落地：`ForgeSecurityAdvisory`，探针 `SecurityFilterChain`，只提醒、不改行为）。
 
 派生规则（`GuardLabels`，`forge-spring-boot-starter`）。识别一律按**注解类型全名**匹配，
 故零编译期依赖；就近语义复用 `MergedAnnotations` + `TYPE_HIERARCHY`（方法级覆盖类级，

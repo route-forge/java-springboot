@@ -144,8 +144,10 @@
   `PUT` 全量覆盖 levels，落盘成功后 `registry.updateLevels` 换 volatile `LevelsConfig` + `clearAllCache`，即时重算。
   铁律 3：`/​_forge/manager` 并入 URI 维排除（`ForgeRouteRegistry.MANAGER_URI_PREFIX` 单点，控制器 `@RequestMapping` 复用）——
   专测钉住「管理器路由可访问却不出现在 forge 自己视图」。测：guard 单测 + 访问契约（404/404/403/排除）+ 保存回环独立上下文。
-- ⏳ **P5-b 剩余**：Redis `CacheStore` 驱动、Thymeleaf 内嵌摘要接线（§5.4，决策已定「纯 Java + 可选方言片段」）、
-  「classpath 无 Security」启动 WARN
+- ✅ **P5-b1 「classpath 无 Security」启动 WARN**（2026-10-08）：`ForgeSecurityAdvisory`（探针
+  `org.springframework.security.web.SecurityFilterChain`、`ClassLoader` 可注入故可脱容器单测），autoconfig 里
+  一个 bean 探测一次、缺则 `LOGGER.warn` 点名 {@code /_forge/**} 无鉴权，**绝不改变行为**（本包不代配 Security）；3 例单测。
+- ⏳ **P5-b2 剩余**：Redis `CacheStore` 驱动、Thymeleaf 内嵌摘要接线（§5.4，决策已定「纯 Java + 可选方言片段」）
 - ⏳ **P6** 示例后端 + Vue/React 双前端 pnpm 联调 + 真实 Laravel HTTP golden 端到端对等 + maven-publish/signing
 
 ## P3 重排（2026-10-07，对着 `G:\web\php-laravel` 参照逐条核过）—— ✅ P3-1..P3-4 全部收口
