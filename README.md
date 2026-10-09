@@ -43,9 +43,9 @@ alone the `internal` one. TypeScript declarations are generated from the same so
 - **Fail loudly, in the right place.** A mistyped tier, a duplicate route name, an alias pointing
   at nothing, or a `defaults` entry that is not a URI variable all raise a structured error
   (`RF_BE_*`) rather than being silently dropped.
-- **Cross-language parity is tested, not claimed.** The Java assertions run against real
-  php-common output frozen in `fixtures/php/expected/` — 294 tests, of which the core layer is
-  compared field by field against the PHP implementation.
+- **Cross-language parity is tested, not claimed.** The `forge-core` assertions are compared field
+  by field against real php-common output frozen in `fixtures/php/expected/`; the full suite
+  currently runs 327 tests, all green.
 
 ## Feature overview
 
@@ -202,7 +202,7 @@ worse than no file. stdout carries artifacts only, all feedback goes to stderr.
 | `endpoint-prefix` | `string` | `/_forge/routes` | Metadata endpoint prefix |
 | `url-prefix` | `string?` | `null` | URL prefix delivered to the frontend |
 | `cache-ttl` | `int?` | `3600` | `null` = no cache, `0` = forever, negative normalized to `null` |
-| `cache-driver` | `string` | `memory` | Anything else fails at startup rather than silently falling back |
+| `cache-driver` | `memory`\|`redis` | `memory` | `redis` uses spring-data-redis (optional dep, JDK-serialized values); a missing dep / missing `RedisConnectionFactory` bean / unknown driver throws `RF_BE_003` at startup rather than silently falling back to memory |
 | `strict-mode` | `bool` | `false` | Aggregate tier problems into one `RF_BE_009` report |
 | `scheme-version` | `int` | `1` | Summary format version |
 | `aliases` | `map` | `{}` | Alias → real route name |

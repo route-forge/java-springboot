@@ -1,0 +1,168 @@
+# Route Forge for Spring Boot
+
+> The Spring Boot adapter of the route-forge project: exposes Spring Boot request mappings to a Vue / React / Inertia SPA through a per-tier, lazy-loadable HTTP metadata endpoint, and generates TypeScript types from the real route registry — no hardcoded frontend URLs, no shipping the whole route table, and annotations are optional. Gradle/Maven coordinates: `io.github.route-forge:forge-spring-boot-starter` (**pre-release, not yet on Maven Central**).
+
+## What it is
+
+Route Forge for Spring Boot is a Java library (`io.github.route-forge:forge-spring-boot-starter`, Java 17 baseline, Spring Boot **tested on 4.x**, MIT). It reads Spring MVC's own handler registry (`RequestMappingHandlerMapping`), assigns each **named** route to a **tier** (a.k.a. level) you define, and serves the metadata over HTTP so a separately-deployed frontend can build URLs and load only the routes it currently needs.
+
+It is the authoritative backend counterpart to the frontend SDKs `@route-forge/core`, `@route-forge/vue`, and `@route-forge/react` (≥ 3.1.0, separate repository), and the wire contract is field-for-field compatible with the Laravel adapter — so **existing frontend code changes nothing** to talk to a Spring Boot backend. The backend owns config; the client discovers it at runtime.
+
+Two modules:
+- `forge-core` — framework-agnostic algorithm (tier resolution, aliases, strict-mode scan, `UriTemplate` normalization, `d.ts` generation, cache semantics). **Zero Spring, zero Jackson.** Mirrors `route-forge/common`.
+- `forge-spring-boot-starter` — the adapter (annotations, route scan, endpoints, Security guard advisory, cache drivers, CLI, manager). Mirrors `route-forge/laravel`. Spring references are `compileOnly`; the starter never forces a Spring version onto the host.
+- `example` — a runnable Boot host used to prove the adapter end-to-end. Not a published artifact.
+
+## When to reach for it
+
+- A Spring Boot API is consumed by a SPA whose HTML is **not** rendered by Spring (Vite/SPA, standalone frontend).
+- The named-route set is large enough that exporting all of it to the client is wasteful; you want **on-demand, per-tier loading**.
+- You want **one source of truth** for route names/params shared between backend and frontend, with **TypeScript types** generated from the real route table.
+- You already run Spring Security and want tiers **derived from existing guard annotations** rather than re-declared.
+
+## Requirements
+
+- **Java 17+** (build artifact class major version 61, pinned by `BuildConventionTest`).
+- **Spring Boot 4.x — tested** (development and full suite run on 4.1). **Boot 3.5+ is physical-compat-but-untested** (a compile sentinel proves `src/main` still compiles against Boot 3.5.16, but runtime behaviour is not promised — do **not** document it as "supports Boot 3"). **Boot 2 and below are excluded** (`javax.*` namespace, no `AutoConfiguration`/`MergedAnnotations`).
+- Servlet stack (`spring-boot-starter-web` / `spring-boot-starter-webmvc`) with a JSON message converter. **WebFlux is not supported** — the scanner reads `RequestMappingHandlerMapping`.
+
+## Install (pre-release)
+
+No Maven Central coordinates yet. To try it from source today, resolve the `io.github.route-forge` coordinates via a Gradle **composite build**:
+
+```kotlin
+// settings.gradle.kts
+includeBuild("/path/to/route-forge-springboot")
+
+// build.gradle.kts
+dependencies {
+    implementation("io.github.route-forge:forge-spring-boot-starter")
+}
+```
+
+No `@Import` and no `@Enable...` switch is required: `ForgeAutoConfiguration` is registered through `AutoConfiguration.imports` and activates only under a **Servlet web application** (`@ConditionalOnWebApplication(SERVLET)`). Formal coordinates, POM and signing land in the publishing phase (see PROGRESS).
+
+## Naming routes (Spring has no named routes)
+
+Four channels, priority **explicit > derived**; if two channels give conflicting facts for the same handler method → startup **fail-fast** `RF_BE_010` (never silently pick one):
+
+1. `@ForgeRoute(name = "admin.users.show", path = "/admin/users/{user:\\d+}", method = GET, tier = "admin", ...)` — a **meta-annotated `@RequestMapping`**. It passes through all 9 native `@RequestMapping` attributes (`name / value / path / method / params / headers / consumes / produces / version`) via `@AliasFor`, so mapping semantics are byte-for-byte Spring's own. Method-only (class prefixes use native `@RequestMapping`; class/package tiers use `@ForgeTier`). It additionally carries forge-only metadata: `tier`, `aliases`, `middleware`, `optional`, `defaults`.
+2. `@Forge(name = "...")` — a **secondary annotation** layered on a native `@GetMapping`/`@PostMapping`/… (escape hatch when the mapping condition is complex). Attributes: `name`, `tier`, `aliases`, `middleware`, `optional`, `defaults`.
+3. Native `@RequestMapping(name = "...")` on the handler — also recognised (equivalent to channel 1's native form; a forge annotation is **not** required).
+4. A `RouteNamingStrategy` bean — derive names from the handler class/method. **Off by default.**
+
+A route with no name is still scanned, URI-normalized and tier-matched — it just never appears in an endpoint / `d.ts` / list row (it can't be referenced by `url()`), so a tier-matched-but-unnamed route surfaces as a **warning**, and the full unnamed inventory is available via `--forge:list --unnamed`.
+
+## Assigning tiers (five-level priority, identical to Laravel)
+
+Method-level explicit tier (`@ForgeRoute(tier = ...)` / `@Forge(tier = ...)`) → `@ForgeTier` on the class or package (resolved nearest-first, method > class > package, so an inner class overrides a package-level tier; `@ForgeTier` is **not** repeatable) → `RouteClassifier` bean → `forge.levels.*.match` config (URI `prefix` and/or `middleware` labels, `any`/`all`/DNF) → `unassigned` fallback.
+
+## Route aliases (rename without breaking the frontend)
+
+Declare the old/public name so existing SPA callers keep working — the frontend needs zero changes. Two ways:
+
+1. `@ForgeRoute(aliases = {"admin.users.old"})` / `@Forge(aliases = {...})` on the **real (target)** route.
+2. `forge.aliases` config map — key = alias, value = real route name. The on-route declaration **wins** when both declare the same alias.
+
+A dangling alias (target missing) throws `RF_BE_008`; a colliding alias yields to the real route with a warning. Aliases are typed into `d.ts` and counted once in the tier's `route_count`.
+
+## URI normalization (`UriTemplate` — Java-only component, no PHP counterpart)
+
+Laravel's `Route::uri()` carries no regex constraints and has no `{*path}` capture segment, so there is nothing to mirror here — this is validated against the **frontend consumption contract** (its placeholder regex `/\{([^{}]+)\}/g`: any form it cannot substitute must never be emitted).
+
+- **Leading slash is kept as Spring emits it** (`/admin/users/{user}`), a documented divergence from Laravel's relative form.
+- **Regex constraints are stripped**: `{user:\d+}` → `{user}`. Param names are parsed by brace depth (`{id:\d{4}}` is a quantifier, not the end of the name) and backslash-escaped pairs are consumed as a unit (`{code:[a-z\}]+}`).
+- **Optional segments**: Spring's template syntax **rejects** `{name?}`, so optionality is declared by `@ForgeRoute(optional = {...})` and re-rendered into the product URI as `{name?}`; `defaults = {"page=1"}` populates `parameter_defaults`. Declaring a name not present in the template → fail-fast.
+- **GET mappings are emitted with `HEAD` appended** — an accurate description of Servlet capability (`doHead` delegates to `doGet`), not a copy of Laravel's shape.
+- A mapping with multiple `path` values expands to **multiple** route records; a condition-only mapping (no path) normalizes to a single `/`; a method-less mapping emits the **full** standard method set (GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS/TRACE), never an empty array.
+
+## HTTP endpoints
+
+- `GET {endpoint-prefix}` (default `/_forge/routes`) — summary: `schemeVersion` + `levels{...route}` + global `config{...}`. The `unassigned` tier always exists; `levels` and `config` are always present (the frontend does no optional-chaining on them); an empty tier serializes to `{}` (**never** `[]`).
+- `GET {endpoint-prefix}/{level}` — per-tier metadata: routes keyed by name, each row carrying exactly `{ uri, methods, parameters, parameter_defaults }` (there is **no** `middleware` field — that is the frontend wire contract and must not be widened for backend self-checks).
+
+Errors return `{"error": {"code": "RF_BE_...", "message": "..."}}`; the structured `violations` list is included **only** when `debug=true`, because it enumerates route names and paths.
+
+## Optional first-page embedding
+
+`ForgeSummaryEmbed` (a framework-free bean, `.script()`) emits the same `<script>` the summary endpoint's payload would produce — a one-shot, self-deleting, non-enumerable `window.__ROUTE_FORGE__` accessor for the `<head>`, letting `@route-forge/core` skip the first summary round-trip. It reuses the **same** producer and cache as the endpoint (so `debug` bypass and self-route exclusion carry over), never inlines per-tier route tables, and does **not** add an HTTP endpoint or bump `schemeVersion`. For Thymeleaf hosts there is an optional dialect (`@ConditionalOnClass`, used via `th:utext="${#forgeSummary.summary}"`); you can also reference the bean directly (`th:utext="${@forgeSummaryEmbed.script()}"`) with **no** Thymeleaf dependency. Output must be written **unescaped** (no re-escaping).
+
+## Manager page (dev-only UI)
+
+- `GET /_forge/manager` — self-contained single-file HTML (inline CSS/JS, zero CDN/build/npm deps).
+- `GET /_forge/manager/api/routes` — tier × route view (source: `ForgeRouteRegistry#allRoutesWithTiers`).
+- `PUT /_forge/manager/api/config` — save and take effect immediately.
+
+**Three stacked gates**: `debug=true` **AND** `forge.manager.enabled=true` (default false) assemble the whole `ManagerConfiguration` (otherwise no beans, no `/_forge/manager/**` routes, zero side effect), then `forge.manager.allowed-ips` (default `[127.0.0.1, ::1]`; `*` = any, empty = no limit; loopback-only when the key is absent) is applied in the controller via `HttpServletRequest#getRemoteAddr()`. Behind a reverse proxy the host must enable `ForwardedHeaderFilter` (the adapter never trusts `X-Forwarded-For` itself). **Save is hot-effective**: full-replace of `levels`, ordered "write file → swap in-memory levels → clear cache", writing `./forge-levels.yml` (top-level `forge: { levels: {...} }`) with backup + atomic move + read-back verification. Manager errors use HTTP status + `{"error":{"message":…}}` (400/403/500) and do **not** occupy the `RF_BE_*` cross-language code family.
+
+## CLI (JVM startup args, not artisan commands)
+
+`--forge:list` / `--forge:types` / `--forge:clear`, with options `--level=` `--json` `--unassigned` `--aliases` `--unnamed` `--out=` (semantics aligned with artisan). This is a Java-only form: the runner is an `ApplicationRunner` **reusing the registry**, because the route table only exists inside a web context. The `--forge:*` flag being **absent is a complete no-op** (normal startup and plain `@SpringBootTest` contexts are unaffected); when present it runs the command and then `System.exit(code)` — so **do not pass these flags on a normal serve** (the app would run the command and exit, exactly like artisan).
+
+- **stdout = machine-consumable product only; stderr = all feedback.** This is a deliberate divergence from artisan (which sends `$this->error` / `Written to` to stdout), so `--forge:list --json > x.json` never mixes diagnostics into the product.
+- Strict-mode violations: `list` prints the full table **plus** a red list and exits 1 (you need the whole picture while debugging); `types` **refuses to emit any product**, sends the list to stderr, and exits 1 (a committed-but-wrong `d.ts` is worse than none).
+- Because the Boot banner/logs default to **stdout**, `--out=` is the recommended path for clean products (writes UTF-8, keeps stdout empty). All products are written as explicit UTF-8.
+- Table output is rendered as a **plain-text aligned box with no ANSI** (unlike the Laravel coloured table); tier/alias/collision/unassigned semantics are conveyed by column text instead.
+
+## Configuration keys (`forge.*`)
+
+- `levels.<name>.description` (string) / `.load` (`eager`|`lazy`, default `lazy`) / `.match.prefix` (string[]) / `.match.middleware` (string[]) / `.match.middleware-match` (`any`|`all`|DNF, `List<List<Integer>>`) / `.endpoint-middleware` (string[], **declared value only**, see below).
+- `endpoint-prefix` (string, default `/_forge/routes`) — also the summary route; the delivered value is normalized (leading `/`, trailing `/` stripped), single-sourced with the actual registered paths and the `d.ts` header.
+- `url-prefix` (string|null) — app route prefix delivered via the summary endpoint.
+- `endpoint-middleware` (string[]) — declared value on the summary endpoint; **Spring side accepts and echoes it but it produces no behavior** (Laravel actually binds it). Real authorization stays with your `SecurityFilterChain`.
+- `cache-ttl` (int|null, default 3600) — `null` = no cache, `0` = forever, negative normalized to `null`.
+- `cache-driver` (`memory`|`redis`, default `memory`) — see Caching below.
+- `strict-mode` (bool, default false) — tier problems aggregated into one `RF_BE_009`; binds at startup and cannot be flipped at runtime inside one JVM.
+- `scheme-version` (int, default 1); `aliases` (map<string,string>).
+- `exclude-uri-prefixes` (string[]) — **Java-only extension**: *appended* to the built-in `{/error, /actuator}` URI-exclusion set (union; the built-in set cannot be cleared). See self-route exclusion.
+- `manager.enabled` (bool, default false); `manager.allowed-ips` (string[]).
+
+Array-valued keys accept a single scalar (`forge.levels.admin.match.prefix=api/admin` is a one-element list), matching the PHP side. A custom classifier is a **`RouteClassifier` bean, not a config entry** — so the "manager can't safely save a PHP closure classifier" problem simply doesn't exist here. Development mode is Spring's **own top-level `debug` flag** (`debug=true`), **not** `forge.debug`.
+
+## Caching & serialization
+
+`CacheStore` is a self-written SPI (not the Spring Cache abstraction); keys `route-forge:<level>` / `route-forge:summary` / `route-forge:_keys`, and `forgetLevel` also invalidates the summary. `ForgeRouteRegistry` only **assembles** (resolvers, alias resolver, filters, cache) and holds no scan result — every read goes through the cache, so the cache layer is the single invalidation point (three entries only: `--forge:clear`, manager save, explicit refresh).
+
+Drivers: `InMemoryCacheStore` (default) and `RedisCacheStore` (multi-instance shared). Redis reuses the **already-declared** `spring-data-redis` (`compileOnly`, zero new coordinates, no direct Lettuce/Jedis) with `StringRedisSerializer` keys and **`JdkSerializationRedisSerializer`** values (Jackson would reopen the Boot-4 Jackson-3 gap). Selection is a single point in `forgeCacheStore`: the Redis branch is behind a `ClassUtils.isPresent` probe so Redis types are never linked when the dependency is absent. Missing `spring-data-redis` **or** no `RedisConnectionFactory` bean → startup throws `RF_BE_003` (never a silent fallback to memory).
+
+## Behavior notes
+
+- **Dev mode (`debug=true`) is one wire for three behaviours**: cache read/write bypass (route/config edits take effect instantly; `clear` is not bypassed), disclosure of the structured `RF_BE_009` `violations` payload, and (together with `manager.enabled`) manager assembly. A WARN banner is logged when the bypass is active.
+- **Self-route exclusion has two dimensions** — by registration **source** (`forge.routes.*` / `forge.manager.*` name prefixes) and by **normalized `endpoint_prefix` URI segment-prefix** — plus the built-in `{/error, /actuator}` set. The URI dimension is required because Spring's own endpoints and framework routes are all **unnamed** (no name to match): without it, once a tier sets `endpoint-middleware`/a broad `match.prefix`, the package would report **itself** as the host's misconfiguration and `strict_mode` would always 500. The URI dimension only affects **unnamed** routes; a route the host explicitly named is never silently dropped, even if its URI is `/error`.
+- **Guard-label derivation (`GuardLabels`)** reads tiers from existing `@PreAuthorize` / `@Secured` / `@RolesAllowed` / `@PermitAll` / `@DenyAll` by **annotation type full name** (so **zero Spring Security dependency**). It uses `MergedAnnotations` + `TYPE_HIERARCHY` (method overrides class, composite annotations understood). Rules are "classify or leave it verbatim": a role literal is taken **exactly** (never add/strip `ROLE_`), a top-level `and` splits into a label union, and anything lossy (e.g. `hasAnyRole`, mixed expressions, ruoyi's `@ss.hasPermi`) is emitted verbatim under an `expression:` prefix. Labels are **classification only and never a security boundary**; the adapter never registers, rewrites or reorders a `SecurityFilterChain`, and never reads someone else's rules.
+
+## Java-specific divergences from the Laravel adapter (be honest about these)
+
+- **`uri` keeps its leading slash** (Spring-native) — Laravel emits it relative. Both forms are consumed correctly by the frontend; this is documented, not a bug.
+- **HTTP endpoint serialization goes through Jackson**: no `\/` escaping, native UTF-8 bytes. Laravel's `json_encode` escapes `/`→`\/` and non-ASCII→`\uXXXX`. **Different bytes, identical after `JSON.parse`.** The P6 golden parity run (real `Illuminate\Http\JsonResponse` vs the Java MockMvc/Jackson path, byte-compared on the same data) found the only deltas in this slash/unicode layer plus the documented leading slash — key order, empty tier `{}`, `methods` and `< > &` (Laravel 13 does **not** apply `JSON_HEX` here) all match. Verdict: **parity passes; not "fixed"**. The parity bar is "equal after `JSON.parse`", not byte-identical.
+- **Two Java serialization paths differ internally** (recorded, not hidden): the HTTP endpoint uses Jackson (no escaping), while `--forge:types --json` / the embedded summary use the core `JsonWriter` (which deliberately mimics PHP `json_encode` escaping). Each matches its PHP counterpart; the two Java paths have different byte shapes but are both valid JSON and frontend-invisible.
+- **`endpoint-middleware` is a declared value only** on the Java side (accepted, echoed in config products, never dropped, produces no behavior) — Laravel truly binds it to the route. Consequently the starter pulls **no** `spring-security-*` dependency, not even `compileOnly`.
+- **No startup warm scan** (PHP does none — a Java startup pass would move strict aggregation to boot and turn "request 500" into "won't start"). The annotation-misplacement check (`ForgeAnnotationSanityChecker`) is a **safe exception**: it runs once after startup, is **warning-only via `WarningSink` (never throws)**, and only engages under `debug` or `strict`. It flags `@Forge` on a non-handler method, or `@ForgeRoute` on a `@Component` that is not a controller. Class/package `@ForgeTier` misplacement is deliberately out of scope (high false-positive surface).
+- **Error-code family** reuses `RF_BE_001`–`RF_BE_009` with the original messages (cross-language). `RF_BE_007` is **not implemented** on the Spring side (it came from a PHP registrar-destructor lifecycle that annotations don't have; the code is reserved and unused). `RF_BE_010` is **Java-only** (naming channels give conflicting facts for one handler).
+- **`exclude-uri-prefixes` is Java-only**: Laravel excludes framework-internal routes by name prefix (`storage.*`); Spring framework routes are unnamed, so exclusion must be by URI segment prefix.
+
+## Optional pairing
+
+For request wrapping, concurrency control, and auth-state-aware tier loading, use the frontend SDK `@route-forge/core` (plus `@route-forge/vue` / `@route-forge/react`) from the separate route-forge frontend repository — no frontend code changes are needed to point at this backend.
+
+## Conventions for agents working in this repo
+
+- **Module boundary is load-bearing**: `forge-core` stays zero Spring / zero Jackson; Spring side is `compileOnly`, and `api(platform(bom))` is forbidden (never force a Spring version onto the host). Breaking this is a directional error — raise it before acting.
+- **Build** (point `GRADLE_USER_HOME` at the project's own `.gradle` so this repo's cache stays isolated): `./gradlew.bat build` (full), `./gradlew.bat :forge-core:test` (iterate one module), `./gradlew.bat clean build --offline --rerun-tasks` (offline self-sufficiency check — must pass after any new dependency). `-parameters` and forced UTF-8 are enforced by `BuildConventionTest`; the Java-17 baseline (class major 61) is pinned by reading its own class header.
+- **Boot 3.5 compile sentinel**: `compileBoot35SentinelJava` mirrors **every** external dependency of `src/main` one-for-one. Any new `compileOnly` dependency added to `src/main` (e.g. servlet-api, snakeyaml, thymeleaf, spring-data-redis) **must** be mirrored into the sentinel classpath, or the sentinel stops compiling. It proves Boot-3.5 *compilability*, not runtime semantics.
+- **Cross-language parity**: run Java assertions against fixtures frozen from `php-common` real products; the acceptance bar is semantic equality after JSON parsing. Any divergence from PHP must be written up in `.docs/SPEC.md` as a "Java-only extension" or a "difference" — silent forks are not allowed.
+- **Commit style**: `type(scope): 中文描述`, scope ∈ {`core`, `starter`, `build`, `docs`, `example`}; run the **full** build green before any commit; do **not** push without explicit instruction. Temporary artifacts always go to `F:/tmp`, never into the repo.
+- **Version line**: independent of the PHP/npm versions (currently `0.1.0`); `schemeVersion` stays `1` and only bumps on an incompatible summary-format change.
+
+## Links
+
+- [README (English)](https://github.com/route-forge/java-springboot#readme) · [README_zh (简体中文)](https://github.com/route-forge/java-springboot/blob/main/README_zh.md)
+- [SPEC — Java-side contract & Spring→forge mapping (`.docs/SPEC.md`)](https://github.com/route-forge/java-springboot/blob/main/.docs/SPEC.md)
+- [PROGRESS — stage checklist (`.docs/PROGRESS.md`)](https://github.com/route-forge/java-springboot/blob/main/.docs/PROGRESS.md)
+- [AGENTS.md — repo working conventions](https://github.com/route-forge/java-springboot/blob/main/AGENTS.md)
+- Authoritative cross-language wire contract: [php-laravel `.docs/SPEC.md`](https://github.com/route-forge/php-laravel/tree/main/.docs)
+- Frontend SDKs: `@route-forge/core` / `@route-forge/vue` / `@route-forge/react` (https://github.com/route-forge/route-forge)
+
+## License
+
+MIT © 阿杰很厉害

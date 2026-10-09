@@ -35,8 +35,8 @@ TypeScript 声明文件由同一个真相源生成。
   纯 Java；只有适配层碰 Spring 的类型。
 - **该报错的地方就报错，不静默。** 层级名拼错、路由名撞车、别名指向不存在的路由、`defaults` 里写了
   不是 URI 变量的名字——一律抛结构化错误码（`RF_BE_*`），不会被悄悄丢掉。
-- **跨语言对等是测出来的，不是说出来的。** Java 侧的断言对着冻结在 `fixtures/php/expected/` 的
-  php-common 真实产物跑，共 294 例，其中核心层逐字段比对 PHP 实现。
+- **跨语言对等是测出来的，不是说出来的。** `forge-core` 的断言对着冻结在 `fixtures/php/expected/` 的
+  php-common 真实产物逐字段比对；全仓测试套件共 327 例、全绿。
 
 ## 能力一览
 
@@ -186,7 +186,7 @@ java -jar app.jar --forge:clear --level=admin
 | `endpoint-prefix` | `string` | `/_forge/routes` | 元信息端点前缀 |
 | `url-prefix` | `string?` | `null` | 下发给前端的 URL 前缀 |
 | `cache-ttl` | `int?` | `3600` | `null` 不缓存、`0` 永久、负值归一为 `null` |
-| `cache-driver` | `string` | `memory` | 配成别的值启动即失败，不会悄悄退回内存 |
+| `cache-driver` | `memory`\|`redis` | `memory` | `redis` 走 spring-data-redis（可选依赖，值用 JDK 序列化）；缺依赖 / 无 `RedisConnectionFactory` bean / 配成未知驱动，启动即抛 `RF_BE_003`，绝不静默退回内存 |
 | `strict-mode` | `bool` | `false` | 层级问题聚合成一条 `RF_BE_009` |
 | `scheme-version` | `int` | `1` | 摘要格式版本 |
 | `aliases` | `map` | `{}` | 别名 → 真实路由名 |
