@@ -62,7 +62,12 @@ Java 侧落地口径：
 | 项 | Laravel 侧 | 本包（Spring 侧） | 理由 |
 |---|---|---|---|
 | 路由 `uri` 前导斜杠 | 不带（`admin/users/{user}`） | 保留（`/admin/users/{user}`） | Spring 的 mapping 天然带 `/`，去掉是为了模仿参照实现，不是契约要求；前端两种都吃 |
+| `uri`/`url_prefix` 里的斜杠转义 | HTTP 端点 `json_encode` 默认把 `/` 转义成 `\/` | Jackson 原样输出 `/` | **传输层字节差异，语义等价**：`\/` 与 `/` 在任意 JSON 解析器（含前端）里解出的字符串完全相同。不强行让 Jackson 模仿 PHP 转义 |
+| 非 ASCII（中文描述等） | HTTP 端点转义成 `\uXXXX` | Jackson 原生 UTF-8 字节 | 同上，**字节不同、解码后等价**；对等验收以「前端 `JSON.parse` 结果一致」为准，不追字节 |
 | `schemeVersion` / 键名 / 空层级 `{}` / 剥正则 | —— | 完全一致 | 这些是前端消费契约，必须一致 |
+
+> **HTTP golden 对等（P6 实测结论，2026-10-09）**：以 `new Illuminate\Http\JsonResponse` 真实编码 vs 本包端点逐字节断言体（MockMvc 走真 Jackson 转换器）比同一份数据，差异**只**落在上两行的斜杠/非-ASCII 转义（外加已文档化的 uri 前导斜杠），键序、空层级 `{}`、`methods`、`< > &`（实测 Laravel **不做** `JSON_HEX` 转义）均一致。判定：`JSON.parse` 后逐字段等价即达对等标准，**不修**。
+> 附带一处本包内部差异（如实记）：HTTP 端点用 Jackson（不转义 `/` 与 unicode），而 `--forge:types --json` / 内嵌摘要用核心 `JsonWriter`（刻意模仿 PHP `json_encode` 的转义）。二者各自对其 PHP  counterpart 一致，但两条 Java 路径之间的字节形态不同——都是合法 JSON，前端无感。
 
 ## 3. 配置项（`forge.*`）
 
